@@ -1,0 +1,4093 @@
+{
+  "schema": "s4-e12-w81-windows-file-roots.v1",
+  "status": "SCOPED_WINDOWS_FILE_ROOTS_PASS_E12_OPEN",
+  "baseline_commit": "88d9e563f2a662ec775e976bf25eb69457cb0232",
+  "prior_certificate": "S4_02_E12_W80_WINDOWS_FILE_OWNERS_CERTIFICATE_2026_11_27.json",
+  "summary": "W81 joins the process current directory to exactly one retained File object through all ten Release checkpoints. An independently opened same-path directory and its search have distinct object identities. An actual duplicate increases only the selected object handle count. The two native profiles each retain two KSEC objects, one cryptographic provider object and one generic device object after shutdown of the context. Each also retains one disk File object under LOCALAPPDATA without a static UCRT link. Flat and Full, the focused directory and device cases, all 46 Release regression groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W81. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. W73 verifies normal desktop shutdown, selected GL name retirement and exact application owner expiry across Flat and Full, and fixes block-atlas release while the context is current. W74 attributes committed and resident image spans and declared module TLS at four matched desktop phases. W75 joins live static TLS vector and loaded-module allocations to observed process threads at the four native phases. W76 observes retained previously sampled static TLS vectors, their checked worker retirement and actual dynamic TLS expansion arrays. W77 joins live inline and expanded TLS values, active and detached FLS slot storage and their direct default-heap references by physical allocation. W78 joins stable typed handle cohort counts, distinct referenced objects, GUI counts, process-charged pool quota and WDDM usage across the five desktop phases. W79 records remaining WDDM usage before and after GLFW termination and the observation boundary at process exit. W80 classifies native File entries and their actual object aliases and joins linked static UCRT slots and descriptors. W81 joins the process current directory root, File volume device types and selected disk path areas to the stable File cohort. Resolve transient search backing and the remaining generic device, CRT, platform and driver allocation owners, with kernel bytes kept separate. Preserve the unmatched kernel and driver allocation domains. Resolve older unobserved static vectors, FLS callback metadata, indirectly reached allocations and independent ownership before whole-process composition. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows Release working-directory handle identity, opened disk path areas and native File device types",
+  "composition_rule": "The validated process-parameter handle selects one kernel object inside the matched File cohort. Same-path search and directory opens have separate object identities. File device and opened-path labels describe each measured object. Treat adjoining UCRT links as references and retain unknown device providers, per-object allocation sizes and driver ownership as independent evidence.",
+  "remaining_measurements": [
+    "Static vectors replaced between checkpoints and FLS global callback backing",
+    "Resources reachable indirectly from slots, index liveness, allocations outside the default heap and independent ownership attribution",
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations",
+    "Matched full process, memory, performance and native acceptance matrix",
+    "Application versus platform retention, file and search backing, kernel object allocation sizes, and attribution of retained driver resources below WDDM totals",
+    "Individual allocations represented by retained WDDM usage and physical reclamation after process exit",
+    "Native resource owners without a linked static-UCRT descriptor, transient search and internal filesystem scratch, extra CRT instances and aggregate process bounds",
+    "Individual providers for generic device objects, transient filesystem scratch, kernel resource byte sizes and the aggregate process bounds"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-rtl_user_process_parameters",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntqueryvolumeinformationfile"
+  ],
+  "device_type_names": {
+    "7": "FILE_DEVICE_DISK",
+    "17": "FILE_DEVICE_NAMED_PIPE",
+    "21": "FILE_DEVICE_NULL",
+    "34": "FILE_DEVICE_UNKNOWN",
+    "57": "FILE_DEVICE_KSEC",
+    "63": "FILE_DEVICE_CRYPT_PROVIDER",
+    "80": "FILE_DEVICE_CONSOLE"
+  },
+  "fixture": {
+    "working_directory": {
+      "changed": {
+        "disk_path_areas": {
+          "local_app_data": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "log_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "other": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "runtime_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "kinds": {
+          "character": {
+            "entries": 3,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 3
+          },
+          "directory": {
+            "entries": 1,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 1
+          },
+          "disk_file": {
+            "entries": 2,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "disk_unclassified": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "pipe": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unknown": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "standard_streams": {
+          "stderr": "disk_file",
+          "stdin": "character",
+          "stdout": "disk_file"
+        },
+        "status": "PASS",
+        "ucrt": {
+          "active_streams": 3,
+          "allocated_dynamic_slots": 70,
+          "caller_buffer_count": 0,
+          "caller_configured_buffer_bytes": 0,
+          "crt_buffer_count": 0,
+          "crt_configured_buffer_bytes": 0,
+          "descriptor_blocks_requested_bytes": 9216,
+          "descriptors_without_os_handle": 0,
+          "dynamic_slots_requested_bytes": 6160,
+          "linked_file_descriptors": 3,
+          "linked_file_streams": 3,
+          "lowio_blocks": 2,
+          "open_descriptors": 3,
+          "pointer_table_requested_bytes": 4096,
+          "retained_standard_temporary_buffers": 1,
+          "retained_standard_temporary_requested_bytes": 4096,
+          "status": "PASS",
+          "stdio_slots": 512,
+          "streams_without_open_descriptor": 0,
+          "temporary_standard_attachments": 0,
+          "temporary_standard_configured_bytes": 0
+        },
+        "volume_devices": {
+          "status": "PASS",
+          "types": [
+            {
+              "storage": {
+                "entries": 3,
+                "linked_ucrt_entries": 2,
+                "linked_ucrt_objects": 1,
+                "objects": 2
+              },
+              "type": 7
+            },
+            {
+              "storage": {
+                "entries": 1,
+                "linked_ucrt_entries": 1,
+                "linked_ucrt_objects": 1,
+                "objects": 1
+              },
+              "type": 21
+            },
+            {
+              "storage": {
+                "entries": 2,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 2
+              },
+              "type": 80
+            }
+          ],
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "working_directory": {
+          "entries": 1,
+          "linked_ucrt_entries": 0,
+          "linked_ucrt_objects": 0,
+          "objects": 1
+        }
+      },
+      "independent": {
+        "disk_path_areas": {
+          "local_app_data": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "log_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "other": {
+            "entries": 5,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 4
+          },
+          "runtime_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "kinds": {
+          "character": {
+            "entries": 3,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 3
+          },
+          "directory": {
+            "entries": 3,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 3
+          },
+          "disk_file": {
+            "entries": 2,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "disk_unclassified": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "pipe": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unknown": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "standard_streams": {
+          "stderr": "disk_file",
+          "stdin": "character",
+          "stdout": "disk_file"
+        },
+        "status": "PASS",
+        "ucrt": {
+          "active_streams": 3,
+          "allocated_dynamic_slots": 70,
+          "caller_buffer_count": 0,
+          "caller_configured_buffer_bytes": 0,
+          "crt_buffer_count": 0,
+          "crt_configured_buffer_bytes": 0,
+          "descriptor_blocks_requested_bytes": 9216,
+          "descriptors_without_os_handle": 0,
+          "dynamic_slots_requested_bytes": 6160,
+          "linked_file_descriptors": 3,
+          "linked_file_streams": 3,
+          "lowio_blocks": 2,
+          "open_descriptors": 3,
+          "pointer_table_requested_bytes": 4096,
+          "retained_standard_temporary_buffers": 1,
+          "retained_standard_temporary_requested_bytes": 4096,
+          "status": "PASS",
+          "stdio_slots": 512,
+          "streams_without_open_descriptor": 0,
+          "temporary_standard_attachments": 0,
+          "temporary_standard_configured_bytes": 0
+        },
+        "volume_devices": {
+          "status": "PASS",
+          "types": [
+            {
+              "storage": {
+                "entries": 5,
+                "linked_ucrt_entries": 2,
+                "linked_ucrt_objects": 1,
+                "objects": 4
+              },
+              "type": 7
+            },
+            {
+              "storage": {
+                "entries": 1,
+                "linked_ucrt_entries": 1,
+                "linked_ucrt_objects": 1,
+                "objects": 1
+              },
+              "type": 21
+            },
+            {
+              "storage": {
+                "entries": 2,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 2
+              },
+              "type": 80
+            }
+          ],
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "working_directory": {
+          "entries": 1,
+          "linked_ucrt_entries": 0,
+          "linked_ucrt_objects": 0,
+          "objects": 1
+        }
+      },
+      "aliased": {
+        "disk_path_areas": {
+          "local_app_data": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "log_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "other": {
+            "entries": 6,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 4
+          },
+          "runtime_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "kinds": {
+          "character": {
+            "entries": 3,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 3
+          },
+          "directory": {
+            "entries": 4,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 3
+          },
+          "disk_file": {
+            "entries": 2,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "disk_unclassified": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "pipe": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unknown": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "standard_streams": {
+          "stderr": "disk_file",
+          "stdin": "character",
+          "stdout": "disk_file"
+        },
+        "status": "PASS",
+        "ucrt": {
+          "active_streams": 3,
+          "allocated_dynamic_slots": 70,
+          "caller_buffer_count": 0,
+          "caller_configured_buffer_bytes": 0,
+          "crt_buffer_count": 0,
+          "crt_configured_buffer_bytes": 0,
+          "descriptor_blocks_requested_bytes": 9216,
+          "descriptors_without_os_handle": 0,
+          "dynamic_slots_requested_bytes": 6160,
+          "linked_file_descriptors": 3,
+          "linked_file_streams": 3,
+          "lowio_blocks": 2,
+          "open_descriptors": 3,
+          "pointer_table_requested_bytes": 4096,
+          "retained_standard_temporary_buffers": 1,
+          "retained_standard_temporary_requested_bytes": 4096,
+          "status": "PASS",
+          "stdio_slots": 512,
+          "streams_without_open_descriptor": 0,
+          "temporary_standard_attachments": 0,
+          "temporary_standard_configured_bytes": 0
+        },
+        "volume_devices": {
+          "status": "PASS",
+          "types": [
+            {
+              "storage": {
+                "entries": 6,
+                "linked_ucrt_entries": 2,
+                "linked_ucrt_objects": 1,
+                "objects": 4
+              },
+              "type": 7
+            },
+            {
+              "storage": {
+                "entries": 1,
+                "linked_ucrt_entries": 1,
+                "linked_ucrt_objects": 1,
+                "objects": 1
+              },
+              "type": 21
+            },
+            {
+              "storage": {
+                "entries": 2,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 2
+              },
+              "type": 80
+            }
+          ],
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "working_directory": {
+          "entries": 2,
+          "linked_ucrt_entries": 0,
+          "linked_ucrt_objects": 0,
+          "objects": 1
+        }
+      },
+      "retired": {
+        "disk_path_areas": {
+          "local_app_data": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "log_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "other": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "runtime_directory": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "kinds": {
+          "character": {
+            "entries": 3,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 3
+          },
+          "directory": {
+            "entries": 1,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 1
+          },
+          "disk_file": {
+            "entries": 2,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "disk_unclassified": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "pipe": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          },
+          "unknown": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "standard_streams": {
+          "stderr": "disk_file",
+          "stdin": "character",
+          "stdout": "disk_file"
+        },
+        "status": "PASS",
+        "ucrt": {
+          "active_streams": 3,
+          "allocated_dynamic_slots": 70,
+          "caller_buffer_count": 0,
+          "caller_configured_buffer_bytes": 0,
+          "crt_buffer_count": 0,
+          "crt_configured_buffer_bytes": 0,
+          "descriptor_blocks_requested_bytes": 9216,
+          "descriptors_without_os_handle": 0,
+          "dynamic_slots_requested_bytes": 6160,
+          "linked_file_descriptors": 3,
+          "linked_file_streams": 3,
+          "lowio_blocks": 2,
+          "open_descriptors": 3,
+          "pointer_table_requested_bytes": 4096,
+          "retained_standard_temporary_buffers": 1,
+          "retained_standard_temporary_requested_bytes": 4096,
+          "status": "PASS",
+          "stdio_slots": 512,
+          "streams_without_open_descriptor": 0,
+          "temporary_standard_attachments": 0,
+          "temporary_standard_configured_bytes": 0
+        },
+        "volume_devices": {
+          "status": "PASS",
+          "types": [
+            {
+              "storage": {
+                "entries": 3,
+                "linked_ucrt_entries": 2,
+                "linked_ucrt_objects": 1,
+                "objects": 2
+              },
+              "type": 7
+            },
+            {
+              "storage": {
+                "entries": 1,
+                "linked_ucrt_entries": 1,
+                "linked_ucrt_objects": 1,
+                "objects": 1
+              },
+              "type": 21
+            },
+            {
+              "storage": {
+                "entries": 2,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 2
+              },
+              "type": 80
+            }
+          ],
+          "unobserved": {
+            "entries": 0,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 0
+          }
+        },
+        "working_directory": {
+          "entries": 1,
+          "linked_ucrt_entries": 0,
+          "linked_ucrt_objects": 0,
+          "objects": 1
+        }
+      }
+    },
+    "retained_named_pipe_objects_after_first_use": 1,
+    "device_lifetime": {
+      "active": [
+        {
+          "storage": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "type": 7
+        },
+        {
+          "storage": {
+            "entries": 3,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 3
+          },
+          "type": 17
+        },
+        {
+          "storage": {
+            "entries": 2,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "type": 21
+        },
+        {
+          "storage": {
+            "entries": 2,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 2
+          },
+          "type": 80
+        }
+      ],
+      "baseline": [
+        {
+          "storage": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "type": 7
+        },
+        {
+          "storage": {
+            "entries": 1,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 1
+          },
+          "type": 17
+        },
+        {
+          "storage": {
+            "entries": 1,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "type": 21
+        },
+        {
+          "storage": {
+            "entries": 2,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 2
+          },
+          "type": 80
+        }
+      ],
+      "cold": [
+        {
+          "storage": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "type": 7
+        },
+        {
+          "storage": {
+            "entries": 1,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "type": 21
+        },
+        {
+          "storage": {
+            "entries": 2,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 2
+          },
+          "type": 80
+        }
+      ],
+      "retired": [
+        {
+          "storage": {
+            "entries": 3,
+            "linked_ucrt_entries": 2,
+            "linked_ucrt_objects": 1,
+            "objects": 2
+          },
+          "type": 7
+        },
+        {
+          "storage": {
+            "entries": 1,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 1
+          },
+          "type": 17
+        },
+        {
+          "storage": {
+            "entries": 1,
+            "linked_ucrt_entries": 1,
+            "linked_ucrt_objects": 1,
+            "objects": 1
+          },
+          "type": 21
+        },
+        {
+          "storage": {
+            "entries": 2,
+            "linked_ucrt_entries": 0,
+            "linked_ucrt_objects": 0,
+            "objects": 2
+          },
+          "type": 80
+        }
+      ]
+    }
+  },
+  "native": {
+    "flat": {
+      "flight_frames": 922,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 108,
+              "before": 108,
+              "comparison_limit_reached": false,
+              "entries": 108,
+              "entry_limit_reached": false,
+              "object_comparisons": 1299,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 47,
+                  "objects": 47
+                },
+                "Event": {
+                  "entries": 15,
+                  "objects": 15
+                },
+                "File": {
+                  "entries": 10,
+                  "objects": 9
+                },
+                "IRTimer": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "IoCompletion": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "Key": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "Mutant": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Semaphore": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "TpWorkerFactory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "WaitCompletionPacket": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 4,
+                "allocated_dynamic_slots": 2,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 1,
+                "crt_configured_buffer_bytes": 4096,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 176,
+                "linked_file_descriptors": 3,
+                "linked_file_streams": 3,
+                "lowio_blocks": 1,
+                "open_descriptors": 6,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 0,
+                "retained_standard_temporary_requested_bytes": 0,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 1,
+                      "linked_ucrt_objects": 1,
+                      "objects": 2
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 0,
+              "peak_gdi": 0,
+              "peak_user": 1,
+              "user": 1
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 167968,
+            "peak_paged_pool_quota_bytes": 168168,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 167968,
+            "peak_paged_pool_quota_bytes": 168168,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 4,
+          "retained_static_vectors": 0,
+          "observed_fls_roots": 1,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 124102
+        },
+        "after_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 325,
+              "before": 325,
+              "comparison_limit_reached": false,
+              "entries": 325,
+              "entry_limit_reached": false,
+              "object_comparisons": 11515,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 10,
+                  "objects": 10
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 116,
+                  "objects": 116
+                },
+                "File": {
+                  "entries": 14,
+                  "objects": 13
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 8,
+                  "objects": 5
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 2,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 2
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 4,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 4
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 4,
+                "allocated_dynamic_slots": 2,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 1,
+                "crt_configured_buffer_bytes": 4096,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 176,
+                "linked_file_descriptors": 3,
+                "linked_file_streams": 3,
+                "lowio_blocks": 1,
+                "open_descriptors": 6,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 1,
+                "retained_standard_temporary_requested_bytes": 4096,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 3,
+                      "linked_ucrt_entries": 1,
+                      "linked_ucrt_objects": 1,
+                      "objects": 3
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 10
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 392920,
+            "peak_paged_pool_quota_bytes": 392920,
+            "nonpaged_pool_quota_bytes": 19616,
+            "peak_nonpaged_pool_quota_bytes": 19752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 392920,
+            "peak_paged_pool_quota_bytes": 393120,
+            "nonpaged_pool_quota_bytes": 19616,
+            "peak_nonpaged_pool_quota_bytes": 20224
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 21831680
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 10,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 172207
+        },
+        "before_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 367,
+              "before": 367,
+              "comparison_limit_reached": false,
+              "entries": 367,
+              "entry_limit_reached": false,
+              "object_comparisons": 13993,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 133,
+                  "objects": 133
+                },
+                "File": {
+                  "entries": 16,
+                  "objects": 15
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 30,
+                  "objects": 27
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 3
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 5
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 5,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 2,
+                "crt_configured_buffer_bytes": 8192,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 4,
+                "linked_file_streams": 4,
+                "lowio_blocks": 1,
+                "open_descriptors": 7,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 4,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 4
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 383728,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 30288,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 383728,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 30288,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 274354176
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 33,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 30,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 224687
+        },
+        "after_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 348,
+              "before": 348,
+              "comparison_limit_reached": false,
+              "entries": 348,
+              "entry_limit_reached": false,
+              "object_comparisons": 13670,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 133,
+                  "objects": 133
+                },
+                "File": {
+                  "entries": 16,
+                  "objects": 15
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 11,
+                  "objects": 8
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 3
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 5
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 5,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 2,
+                "crt_configured_buffer_bytes": 8192,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 4,
+                "linked_file_streams": 4,
+                "lowio_blocks": 1,
+                "open_descriptors": 7,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 4,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 4
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 383728,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 28792,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 383728,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 28792,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 274354176
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 14,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 11,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 161828
+        },
+        "after_context_destroy": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 344,
+              "before": 344,
+              "comparison_limit_reached": false,
+              "entries": 344,
+              "entry_limit_reached": false,
+              "object_comparisons": 13510,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 132,
+                  "objects": 132
+                },
+                "File": {
+                  "entries": 15,
+                  "objects": 14
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 10,
+                  "objects": 7
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 3
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 4,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 4
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 5,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 2,
+                "crt_configured_buffer_bytes": 8192,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 4,
+                "linked_file_streams": 4,
+                "lowio_blocks": 1,
+                "open_descriptors": 7,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 4,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 4
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 7,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 4
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 381920,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 27704,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 381920,
+            "peak_paged_pool_quota_bytes": 394040,
+            "nonpaged_pool_quota_bytes": 27704,
+            "peak_nonpaged_pool_quota_bytes": 31720
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 270098432
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 13,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 10,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 156334
+        }
+      },
+      "wddm_after_window_destroy_before_glfw_terminate": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 270098432
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ],
+      "wddm_window_destroy_delta_bytes": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": -4255744
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ],
+      "wddm_glfw_terminate_delta_bytes": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ]
+    },
+    "full": {
+      "flight_frames": 511,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 108,
+              "before": 108,
+              "comparison_limit_reached": false,
+              "entries": 108,
+              "entry_limit_reached": false,
+              "object_comparisons": 1300,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 47,
+                  "objects": 47
+                },
+                "Event": {
+                  "entries": 15,
+                  "objects": 15
+                },
+                "File": {
+                  "entries": 10,
+                  "objects": 9
+                },
+                "IRTimer": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "IoCompletion": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "Key": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "Mutant": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Semaphore": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "TpWorkerFactory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "WaitCompletionPacket": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 4,
+                "allocated_dynamic_slots": 2,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 1,
+                "crt_configured_buffer_bytes": 4096,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 176,
+                "linked_file_descriptors": 3,
+                "linked_file_streams": 3,
+                "lowio_blocks": 1,
+                "open_descriptors": 6,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 0,
+                "retained_standard_temporary_requested_bytes": 0,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 1,
+                      "linked_ucrt_objects": 1,
+                      "objects": 2
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 0,
+              "peak_gdi": 0,
+              "peak_user": 1,
+              "user": 1
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 167968,
+            "peak_paged_pool_quota_bytes": 168168,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 167968,
+            "peak_paged_pool_quota_bytes": 168168,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 4,
+          "retained_static_vectors": 0,
+          "observed_fls_roots": 1,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 116739
+        },
+        "after_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 324,
+              "before": 324,
+              "comparison_limit_reached": false,
+              "entries": 324,
+              "entry_limit_reached": false,
+              "object_comparisons": 11401,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 10,
+                  "objects": 10
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 115,
+                  "objects": 115
+                },
+                "File": {
+                  "entries": 14,
+                  "objects": 13
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 8,
+                  "objects": 5
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "other": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 2,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 2
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 4,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 4
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 4,
+                "allocated_dynamic_slots": 2,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 1,
+                "crt_configured_buffer_bytes": 4096,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 176,
+                "linked_file_descriptors": 3,
+                "linked_file_streams": 3,
+                "lowio_blocks": 1,
+                "open_descriptors": 6,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 1,
+                "retained_standard_temporary_requested_bytes": 4096,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 3,
+                      "linked_ucrt_entries": 1,
+                      "linked_ucrt_objects": 1,
+                      "objects": 3
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 10
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 392920,
+            "peak_paged_pool_quota_bytes": 392920,
+            "nonpaged_pool_quota_bytes": 19616,
+            "peak_nonpaged_pool_quota_bytes": 19752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 376720,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 19480,
+            "peak_nonpaged_pool_quota_bytes": 20088
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 21831680
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 10,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 126654
+        },
+        "before_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 384,
+              "before": 384,
+              "comparison_limit_reached": false,
+              "entries": 384,
+              "entry_limit_reached": false,
+              "object_comparisons": 15823,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 145,
+                  "objects": 145
+                },
+                "File": {
+                  "entries": 18,
+                  "objects": 17
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 35,
+                  "objects": 32
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 3,
+                  "linked_ucrt_objects": 3,
+                  "objects": 3
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 4,
+                  "linked_ucrt_objects": 4,
+                  "objects": 5
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 5
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 7,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 4,
+                "crt_configured_buffer_bytes": 16384,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 6,
+                "linked_file_streams": 6,
+                "lowio_blocks": 1,
+                "open_descriptors": 9,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 6,
+                      "linked_ucrt_entries": 4,
+                      "linked_ucrt_objects": 4,
+                      "objects": 6
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 388544,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 31648,
+            "peak_nonpaged_pool_quota_bytes": 31920
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 388544,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 31648,
+            "peak_nonpaged_pool_quota_bytes": 32256
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 405958656
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 34,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 34,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 247666
+        },
+        "after_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 361,
+              "before": 361,
+              "comparison_limit_reached": false,
+              "entries": 361,
+              "entry_limit_reached": false,
+              "object_comparisons": 15363,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 145,
+                  "objects": 145
+                },
+                "File": {
+                  "entries": 18,
+                  "objects": 17
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 12,
+                  "objects": 9
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 3,
+                  "linked_ucrt_objects": 3,
+                  "objects": 3
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 4,
+                  "linked_ucrt_objects": 4,
+                  "objects": 5
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 5
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 7,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 4,
+                "crt_configured_buffer_bytes": 16384,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 6,
+                "linked_file_streams": 6,
+                "lowio_blocks": 1,
+                "open_descriptors": 9,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 6,
+                      "linked_ucrt_entries": 4,
+                      "linked_ucrt_objects": 4,
+                      "objects": 6
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 388544,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 29608,
+            "peak_nonpaged_pool_quota_bytes": 32256
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 388544,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 29608,
+            "peak_nonpaged_pool_quota_bytes": 32256
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 405958656
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 11,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 11,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 196263
+        },
+        "after_context_destroy": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 357,
+              "before": 357,
+              "comparison_limit_reached": false,
+              "entries": 357,
+              "entry_limit_reached": false,
+              "object_comparisons": 15188,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 144,
+                  "objects": 144
+                },
+                "File": {
+                  "entries": 17,
+                  "objects": 16
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 11,
+                  "objects": 8
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "file_resources": {
+              "disk_path_areas": {
+                "local_app_data": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "log_directory": {
+                  "entries": 3,
+                  "linked_ucrt_entries": 3,
+                  "linked_ucrt_objects": 3,
+                  "objects": 3
+                },
+                "other": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 1,
+                  "linked_ucrt_objects": 1,
+                  "objects": 1
+                },
+                "runtime_directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "kinds": {
+                "character": {
+                  "entries": 7,
+                  "linked_ucrt_entries": 2,
+                  "linked_ucrt_objects": 2,
+                  "objects": 6
+                },
+                "directory": {
+                  "entries": 1,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 1
+                },
+                "disk_file": {
+                  "entries": 5,
+                  "linked_ucrt_entries": 4,
+                  "linked_ucrt_objects": 4,
+                  "objects": 5
+                },
+                "disk_unclassified": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "pipe": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                },
+                "unknown": {
+                  "entries": 4,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 4
+                }
+              },
+              "standard_streams": {
+                "stderr": "character",
+                "stdin": null,
+                "stdout": "character"
+              },
+              "status": "PASS",
+              "ucrt": {
+                "active_streams": 7,
+                "allocated_dynamic_slots": 9,
+                "caller_buffer_count": 0,
+                "caller_configured_buffer_bytes": 0,
+                "crt_buffer_count": 4,
+                "crt_configured_buffer_bytes": 16384,
+                "descriptor_blocks_requested_bytes": 4608,
+                "descriptors_without_os_handle": 3,
+                "dynamic_slots_requested_bytes": 792,
+                "linked_file_descriptors": 6,
+                "linked_file_streams": 6,
+                "lowio_blocks": 1,
+                "open_descriptors": 9,
+                "pointer_table_requested_bytes": 4096,
+                "retained_standard_temporary_buffers": 2,
+                "retained_standard_temporary_requested_bytes": 8192,
+                "status": "PASS",
+                "stdio_slots": 512,
+                "streams_without_open_descriptor": 1,
+                "temporary_standard_attachments": 0,
+                "temporary_standard_configured_bytes": 0
+              },
+              "volume_devices": {
+                "status": "PASS",
+                "types": [
+                  {
+                    "storage": {
+                      "entries": 6,
+                      "linked_ucrt_entries": 4,
+                      "linked_ucrt_objects": 4,
+                      "objects": 6
+                    },
+                    "type": 7
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 34
+                  },
+                  {
+                    "storage": {
+                      "entries": 2,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 2
+                    },
+                    "type": 57
+                  },
+                  {
+                    "storage": {
+                      "entries": 1,
+                      "linked_ucrt_entries": 0,
+                      "linked_ucrt_objects": 0,
+                      "objects": 1
+                    },
+                    "type": 63
+                  },
+                  {
+                    "storage": {
+                      "entries": 7,
+                      "linked_ucrt_entries": 2,
+                      "linked_ucrt_objects": 2,
+                      "objects": 6
+                    },
+                    "type": 80
+                  }
+                ],
+                "unobserved": {
+                  "entries": 0,
+                  "linked_ucrt_entries": 0,
+                  "linked_ucrt_objects": 0,
+                  "objects": 0
+                }
+              },
+              "working_directory": {
+                "entries": 1,
+                "linked_ucrt_entries": 0,
+                "linked_ucrt_objects": 0,
+                "objects": 1
+              }
+            },
+            "gui_objects": {
+              "gdi": 7,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 4
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 386400,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 28520,
+            "peak_nonpaged_pool_quota_bytes": 32256
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 386400,
+            "peak_paged_pool_quota_bytes": 393112,
+            "nonpaged_pool_quota_bytes": 28520,
+            "peak_nonpaged_pool_quota_bytes": 32256
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 368926720
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 10,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 10,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 174504
+        }
+      },
+      "wddm_after_window_destroy_before_glfw_terminate": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 368926720
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ],
+      "wddm_window_destroy_delta_bytes": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": -37031936
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ],
+      "wddm_glfw_terminate_delta_bytes": [
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 32939,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "local",
+          "usage_bytes": 0
+        },
+        {
+          "luid_high": 0,
+          "luid_low": 36471,
+          "physical_adapter_index": 0,
+          "segment": "non_local",
+          "usage_bytes": 0
+        }
+      ]
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "4e15402783f26505a9153a26b35255040962f41866416717042e04b2ce85eb97",
+  "source_sha256_raw": {
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "995ebcd887bca73d30fe188c941f619e4b2a2f75616c6e79b23c7db5895b730a",
+    "src/Core/Memory/WindowsFileObjectObservation.h": "0fdc059221a38d5301adce85f22444035144ff281b7f962e0eab619ef2c6f196",
+    "src/Core/Memory/WindowsPlatformResources.h": "1ecb752963ed53cebc9af6fedebef4b99701541cfb55a16a0119efbf3c41397e",
+    "src/Test/WindowsIoResourceFixture.h": "3ca8884c7610b38e2ca530c45dc6a4b4a685e6a1abcc3b52ecf18dca57058196"
+  },
+  "desktop_exe_sha256": "b420c4bcf4d5743ee0f12ce3a11b5c8796ea361538f435061fd06a8a7730397e",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-file-roots-final-provenance.json": "ec4058496b66df45f56f673a4d33fc38190320f5ff45a2d11bee359445f04b0b",
+    "build/desktop-msvc/s4-file-roots-final-frozen-source.json": "a58faa787fd4d4d82becfee23f3d1ab1c7c06e722a0e5144e33960736630887e",
+    "build/desktop-msvc/s4-file-roots-final-regressions.json": "211c2b6fe9660cd0e5f5d591d9c87806a254f0e33b9bfbe3b67939ff47178826",
+    "build/desktop-msvc/s4-file-roots-final-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-file-roots-final-io-owners.json": "577f0db5356a8cbf5b6fd936a60ef158bf13f3556bb5064476e8737090908b74",
+    "build/desktop-msvc/s4-file-roots-final-focused.json": "953d76d1a82eb5fee10d820547c89a8382889b51981a6dbe315664f0ecfe7c71",
+    "build/desktop-msvc/Release/windows_module_tls_fixture.dll": "16a24723db6c428963b8b3e54260a795b8872b825536272fa9ec42eaef31a807",
+    "build/desktop-msvc/s4-file-roots-device-probe.log": "45e420885416109bf99de80378f32ed3835b3e90fd58604a652538faeea5dbc1",
+    "build/desktop-msvc/s4-file-roots-fixture-probe.log": "1f98b2810b2db0cfa696ad3b15fce7560986bab3ff15156262995f4becbda069",
+    "build/desktop-msvc/s4-file-roots-focused.log": "6f567340d3a504a9bd3cd7607cfb68ae8de36fe6ddf9500da2b9006fedec68c1",
+    "build/desktop-msvc/s4-file-roots-path-probe.log": "9a82a5ec066ad30ad15d229ddc2191b2352817482d70e7d5b1196dbb77c66ce7",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/smoke-verdict.json": "2d150f0cf91cfbe4d11d3c83292ac3edf09180c63688b497bab28f0201d6b1d5",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/flight_sim_report.json": "36519ffa06b4542cc371f411042c2f5c82e0613ecc3e3c09f22073ee8175eb32",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/desktop-normal-shutdown.json": "382d59cb2e62a08593783af203b3108baee3db8cbd96e4a3bccb9c9703224a79",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/legacy-gates.json": "a2c51fdf1c3a26caf8d2579465fdf9c6eee7b5d088928cf4fe3499557d6a5688",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/route.json": "5dc0cf9e8d37a199f6086139f14fc2ecc642b9e02d8c52d73d2fa178d9eb8edb",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/runner.log": "1a722f32e51b782490a19a0ff39e9be71abceae9053d59b187cb379196030afd",
+    "build/desktop-msvc/s4-file-roots-final-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-file-roots-final-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-file-roots-final-full-native/smoke-verdict.json": "7ec97559ddd1ceab8f45ce06d13f85cf32995da590aacab51a96f64c11dfc547",
+    "build/desktop-msvc/s4-file-roots-final-full-native/flight_sim_report.json": "669e96ea822875948b24067ef37ce2916f68b6f4052a555b94a3aa1e078939a8",
+    "build/desktop-msvc/s4-file-roots-final-full-native/desktop-normal-shutdown.json": "860390c083621e8d2555c0d056e21b188d8de3dc02c1668f41f5fa507ecb0f7b",
+    "build/desktop-msvc/s4-file-roots-final-full-native/legacy-gates.json": "0b34cc66404b4761da522d283bcb651f3ac3bae20ef9c906371d0888851c58dd",
+    "build/desktop-msvc/s4-file-roots-final-full-native/route.json": "eff9c54553d0e5a4b2ef99a124d679c90df1e12b3d7740c0c8a0225aff41dc7f",
+    "build/desktop-msvc/s4-file-roots-final-full-native/runner.log": "d8e49313013092043040c24b7cc572ef351f4d1155620b1642fa3b27a5a69e65",
+    "build/desktop-msvc/s4-file-roots-final-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

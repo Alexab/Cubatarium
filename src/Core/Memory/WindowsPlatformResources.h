@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Memory/WindowsCrtIoStorage.h"
+#include "Core/Memory/WindowsFileObjectObservation.h"
 #include "Core/Memory/WindowsProcessMemory.h"
 #include <algorithm>
 #include <array>
@@ -29,14 +30,26 @@ inline constexpr std::array WindowsFileKindNames{"disk_file", "directory", "pipe
 struct WindowsFileResourceRow
 {
   std::size_t entries{}, objects{}, linkedCrtEntries{}, linkedCrtObjects{};
+
+  void Add(const WindowsFileResourceRow &other) noexcept
+  {
+    entries += other.entries;
+    objects += other.objects;
+    linkedCrtEntries += other.linkedCrtEntries;
+    linkedCrtObjects += other.linkedCrtObjects;
+  }
 };
 
 struct WindowsFileResources
 {
   std::array<WindowsFileResourceRow, WindowsFileKindNames.size()> kinds{};
   std::array<std::optional<WindowsFileKind>, 3> standardStreams;
+  std::optional<WindowsFileResourceRow> workingDirectory;
+  std::array<WindowsFileResourceRow, WindowsDiskPathAreaNames.size()> diskAreas{};
+  std::map<std::uint32_t, WindowsFileResourceRow> deviceTypes;
+  WindowsFileResourceRow unobservedDevices;
   WindowsCrtIoStorage crt;
-  bool stable{};
+  bool stable{}, deviceQueryAvailable{};
 };
 
 struct WindowsHandleTable
@@ -182,51 +195,66 @@ inline WindowsFileKind ReadFileKind(HANDLE handle) noexcept
   }
 }
 
-inline std::vector<WindowsFileKind> ReadFileKinds(const HandleObjects &objects, WindowsFileResources &result)
+struct FileObservation
 {
-  std::vector<WindowsFileKind> kinds;
-  kinds.reserve(objects.representatives.size());
+  WindowsFileKind kind;
+  WindowsDiskPathArea area;
+  std::optional<std::uint32_t> deviceType;
+  WindowsFileResourceRow counts{0, 1};
+};
+
+inline std::vector<FileObservation> ReadFileObservations(const HandleObjects &objects,
+                                                        windows_file_object_detail::QueryVolume query)
+{
+  using namespace windows_file_object_detail;
+  const auto areas = ReadPathAreas();
+  std::vector<FileObservation> files;
+  files.reserve(objects.representatives.size());
   for (auto handle : objects.representatives)
   {
     const auto kind = ReadFileKind(handle);
-    kinds.push_back(kind);
-    ++result.kinds[static_cast<std::size_t>(kind)].objects;
+    const auto area = kind == WindowsFileKind::DiskFile || kind == WindowsFileKind::Directory ?
+        areas.Classify(ReadOpenedPath(handle)) : WindowsDiskPathArea::NotDisk;
+    files.push_back({kind, area, ReadDeviceType(query, handle)});
   }
   for (auto object : objects.objectForEntry)
-    ++result.kinds[static_cast<std::size_t>(kinds[object])].entries;
-  result.stable = true;
-  return kinds;
+    ++files[object].counts.entries;
+  return files;
+}
+
+inline std::optional<std::size_t> FileEntry(const std::vector<HANDLE> &handles, std::uintptr_t address)
+{
+  const auto entry = std::lower_bound(handles.begin(), handles.end(), address, [](HANDLE current, auto value) {
+    return reinterpret_cast<std::uintptr_t>(current) < value;
+  });
+  if (entry == handles.end() || reinterpret_cast<std::uintptr_t>(*entry) != address)
+    return std::nullopt;
+  return static_cast<std::size_t>(entry - handles.begin());
 }
 
 #if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
 inline void LinkCrtFiles(const windows_crt_io_detail::Snapshot &snapshot, const std::vector<HANDLE> &handles,
-                          const HandleObjects &objects, const std::vector<WindowsFileKind> &kinds,
+                          const HandleObjects &objects, std::vector<FileObservation> &observed,
                           WindowsFileResources &result)
 {
   result.crt = windows_crt_io_detail::Summarize(snapshot);
-  std::vector<bool> linkedEntries(handles.size()), linkedObjects(kinds.size());
+  std::vector<bool> linkedEntries(handles.size());
   for (const auto &descriptor : snapshot.descriptors)
   {
     if (!descriptor.HasHandle())
       continue;
-    const auto address = static_cast<std::uintptr_t>(descriptor.handle);
-    const auto entry = std::lower_bound(handles.begin(), handles.end(), address, [](HANDLE current, auto value) {
-      return reinterpret_cast<std::uintptr_t>(current) < value;
-    });
-    if (entry == handles.end() || reinterpret_cast<std::uintptr_t>(*entry) != address)
+    const auto index = FileEntry(handles, static_cast<std::uintptr_t>(descriptor.handle));
+    if (!index)
       continue;
-    const auto index = static_cast<std::size_t>(entry - handles.begin());
-    const auto object = objects.objectForEntry[index];
+    auto &file = observed[objects.objectForEntry[*index]];
     // freopen can bind a standard FILE slot to a different lowio index.
     for (std::size_t i = 0; i < result.standardStreams.size(); ++i)
       if ((snapshot.streams[i].flags & windows_crt_io_detail::SlotAllocated) &&
           snapshot.streams[i].descriptor == static_cast<int>(descriptor.index))
-        result.standardStreams[i] = kinds[object];
-    auto &kind = result.kinds[static_cast<std::size_t>(kinds[object])];
-    kind.linkedCrtEntries += !linkedEntries[index];
-    kind.linkedCrtObjects += !linkedObjects[object];
-    linkedEntries[index] = true;
-    linkedObjects[object] = true;
+        result.standardStreams[i] = file.kind;
+    file.counts.linkedCrtEntries += !linkedEntries[*index];
+    file.counts.linkedCrtObjects = 1;
+    linkedEntries[*index] = true;
     ++result.crt.linkedDescriptors;
     result.crt.linkedStreams += descriptor.streams;
   }
@@ -243,9 +271,12 @@ inline WindowsHandleTable ReadHandles()
   const auto query = reinterpret_cast<QueryProcess>(GetProcAddress(ntdll, "NtQueryInformationProcess"));
   const auto object = reinterpret_cast<QueryObject>(GetProcAddress(ntdll, "NtQueryObject"));
   const auto compare = reinterpret_cast<CompareHandles>(GetProcAddress(kernel, "CompareObjectHandles"));
+  const auto device = reinterpret_cast<windows_file_object_detail::QueryVolume>(
+      GetProcAddress(ntdll, "NtQueryVolumeInformationFile"));
   if (!query || !object || !compare)
     return result;
   result.supported = true;
+  const auto directoryBefore = windows_file_object_detail::ReadWorkingDirectory();
   const auto self = GetCurrentProcess();
   DWORD countBefore{};
   result.beforeObserved = GetProcessHandleCount(self, &countBefore) != 0;
@@ -286,8 +317,7 @@ inline WindowsHandleTable ReadHandles()
       fileObjects = std::move(objects);
     }
   }
-  WindowsFileResources files;
-  auto kinds = fileObjects ? ReadFileKinds(*fileObjects, files) : std::vector<WindowsFileKind>{};
+  auto observed = fileObjects ? ReadFileObservations(*fileObjects, device) : std::vector<FileObservation>{};
 
   const bool afterCaptured = ReadTable(query, buffer, after);
   DWORD countAfter{};
@@ -300,12 +330,35 @@ inline WindowsHandleTable ReadHandles()
     result.entries = before.size();
     result.untyped = untyped;
     result.types = std::move(types);
+    auto &files = result.files;
+    files.stable = fileObjects.has_value();
+    files.deviceQueryAvailable = device != nullptr;
 #if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
     const auto crtAfter = windows_crt_io_detail::ReadSnapshot();
     if (fileObjects && !untyped && crtBefore && crtAfter && *crtBefore == *crtAfter)
-      LinkCrtFiles(*crtAfter, *fileHandles, *fileObjects, kinds, files);
+      LinkCrtFiles(*crtAfter, *fileHandles, *fileObjects, observed, files);
 #endif
-    result.files = std::move(files);
+    for (const auto &file : observed)
+    {
+      files.kinds[static_cast<std::size_t>(file.kind)].Add(file.counts);
+      if (file.area != WindowsDiskPathArea::NotDisk)
+        files.diskAreas[static_cast<std::size_t>(file.area)].Add(file.counts);
+      if (file.deviceType)
+        files.deviceTypes[*file.deviceType].Add(file.counts);
+      else
+        files.unobservedDevices.Add(file.counts);
+    }
+    if (fileObjects && directoryBefore)
+    {
+      const auto directoryAfter = windows_file_object_detail::ReadWorkingDirectory();
+      const auto entry = FileEntry(*fileHandles, reinterpret_cast<std::uintptr_t>(directoryBefore->handle));
+      if (entry && directoryAfter && *directoryBefore == *directoryAfter)
+      {
+        const auto &directory = observed[fileObjects->objectForEntry[*entry]];
+        if (directory.kind == WindowsFileKind::Directory)
+          files.workingDirectory = directory.counts;
+      }
+    }
   }
   return result;
 }

@@ -4,6 +4,9 @@
 #include "Test/IoCodecAllocationFixture.h"
 #include <array>
 #include <memory>
+#ifdef _WIN32
+#include <winioctl.h>
+#endif
 
 namespace cutum::windows_io_resource_fixture
 {
@@ -87,6 +90,128 @@ inline void CheckFileKind(const Sample &baseline, const Sample &sample, WindowsF
   Require(before.stable && now.stable && now.kinds[index].entries == before.kinds[index].entries + entries &&
       now.kinds[index].objects == before.kinds[index].objects + objects,
       "validate the File subtype of the selected Windows resource and its aliases");
+}
+
+inline void CheckDevice(const Sample &before, const Sample &after, std::uint32_t type,
+                        std::size_t entries, std::size_t objects)
+{
+  const auto find = [type](const Sample &sample) {
+    const auto &types = sample.platform.handles.files.deviceTypes;
+    const auto entry = types.find(type);
+    return entry == types.end() ? WindowsFileResourceRow{} : entry->second;
+  };
+  const auto a = find(before), b = find(after);
+  Require(b.entries == a.entries + entries && b.objects == a.objects + objects,
+          "verify the native device type and distinct object count");
+}
+
+inline Json CheckWorkingDirectory(const std::filesystem::path &root, const Sample &baseline)
+{
+#if defined(_WIN64) && defined(_M_X64)
+  using namespace windows_file_object_detail;
+  if (!baseline.platform.handles.supported || !baseline.platform.handles.files.deviceQueryAvailable)
+    return {{"status", "UNSUPPORTED"}};
+  const auto original = ReadWorkingDirectory();
+  Require(original.has_value(), "match the initial directory path and its exact process handle");
+  const auto absolute = std::filesystem::absolute(root);
+  struct RestoreDirectory
+  {
+    std::wstring path;
+    ~RestoreDirectory() { if (!path.empty()) SetCurrentDirectoryW(path.c_str()); }
+  } restore{original->path + L"\\"};
+  Require(SetCurrentDirectoryW(absolute.c_str()) != 0, "change the isolated fixture current directory");
+  const auto selected = ReadWorkingDirectory();
+  Require(selected && !SamePath(selected->path, original->path) && selected->handle != original->handle,
+          "observe the replacement directory and native handle");
+  const auto changed = Observe();
+  const auto &changedRoot = changed.platform.handles.files.workingDirectory;
+  Require(changedRoot && changedRoot->entries == 1 && changedRoot->objects == 1 && !changedRoot->linkedCrtEntries,
+          "join the current directory to exactly one live native File object");
+
+  Sample independent, aliased;
+  {
+    const auto opened = CreateFileW(absolute.c_str(), FILE_READ_ATTRIBUTES,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    Require(opened != INVALID_HANDLE_VALUE, "open the same directory independently");
+    const File separate(opened);
+    FILE_ID_INFO expected{}, actual{};
+    Require(GetFileInformationByHandleEx(separate.get(), FileIdInfo, &expected, sizeof(expected)) &&
+        GetFileInformationByHandleEx(selected->handle, FileIdInfo, &actual, sizeof(actual)) &&
+        expected.VolumeSerialNumber == actual.VolumeSerialNumber &&
+        std::memcmp(&expected.FileId, &actual.FileId, sizeof(actual.FileId)) == 0,
+        "verify that the independent handle refers to the same filesystem directory");
+    WIN32_FIND_DATAW entry{};
+    const auto search = FindFirstFileExW((absolute / L"*.bin").c_str(), FindExInfoBasic, &entry,
+                                         FindExSearchNameMatch, nullptr, 0);
+    Require(search != INVALID_HANDLE_VALUE, "start an independent search on the same directory");
+    const Search find(search);
+    independent = Observe();
+    CheckFileKind(changed, independent, WindowsFileKind::Directory, 2, 2);
+    const auto &sameRoot = independent.platform.handles.files.workingDirectory;
+    Require(sameRoot && sameRoot->entries == 1 && sameRoot->objects == 1,
+            "keep both same-path objects outside the current directory's alias count");
+
+    HANDLE duplicate{};
+    Require(DuplicateHandle(GetCurrentProcess(), selected->handle, GetCurrentProcess(), &duplicate, 0, FALSE,
+              DUPLICATE_SAME_ACCESS) != 0, "duplicate the actual current directory handle");
+    const File alias(duplicate);
+    aliased = Observe();
+    CheckFileKind(changed, aliased, WindowsFileKind::Directory, 3, 2);
+    const auto &aliasRoot = aliased.platform.handles.files.workingDirectory;
+    Require(aliasRoot && aliasRoot->entries == 2 && aliasRoot->objects == 1,
+            "count the duplicate only on the current directory object");
+    CheckDevice(changed, aliased, FILE_DEVICE_DISK, 3, 2);
+  }
+  const auto retired = Observe();
+  CheckFileKind(changed, retired, WindowsFileKind::Directory, 0, 0);
+  CheckDevice(changed, retired, FILE_DEVICE_DISK, 0, 0);
+  const auto &remaining = retired.platform.handles.files.workingDirectory;
+  Require(remaining && remaining->entries == 1 && remaining->objects == 1,
+          "retire the duplicate and same-path handles while the selected directory remains");
+  Require(SetCurrentDirectoryW(restore.path.c_str()) != 0, "restore the original fixture directory");
+  restore.path.clear();
+  const auto restored = ReadWorkingDirectory();
+  Require(restored && SamePath(restored->path, original->path), "verify restoration of the original directory");
+  return {{"status", "PASS"}, {"changed", changed.Report()}, {"independent", independent.Report()},
+          {"aliased", aliased.Report()}, {"retired", retired.Report()}, {"restored", true}};
+#else
+  (void)root;
+  (void)baseline;
+  return {{"status", "UNSUPPORTED"}};
+#endif
+}
+
+inline Json CheckDeviceKinds()
+{
+  const auto cold = Observe();
+  if (!cold.platform.handles.supported || !cold.platform.handles.files.deviceQueryAvailable)
+    return {{"status", "UNSUPPORTED"}};
+  const auto makePipe = [] {
+    HANDLE input{}, output{};
+    Require(CreatePipe(&input, &output, nullptr, 0) != 0, "create an isolated pair of pipe endpoints");
+    return std::array<File, 2>{File(input), File(output)};
+  };
+  // The first CreatePipe can retain a process-wide named pipe root.
+  (void)makePipe();
+  const auto before = Observe();
+  Sample active;
+  {
+    const auto handle = CreateFileW(L"NUL", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    Require(handle != INVALID_HANDLE_VALUE, "open the ordinary null device");
+    const File null(handle);
+    const auto endpoints = makePipe();
+    active = Observe();
+    CheckFileKind(before, active, WindowsFileKind::Character, 1, 1);
+    CheckFileKind(before, active, WindowsFileKind::Pipe, 2, 2);
+    CheckDevice(before, active, FILE_DEVICE_NULL, 1, 1);
+    CheckDevice(before, active, FILE_DEVICE_NAMED_PIPE, 2, 2);
+  }
+  const auto retired = Observe();
+  CheckDevice(before, retired, FILE_DEVICE_NULL, 0, 0);
+  CheckDevice(before, retired, FILE_DEVICE_NAMED_PIPE, 0, 0);
+  return {{"status", "PASS"}, {"cold", cold.Report()}, {"baseline", before.Report()},
+          {"active", active.Report()}, {"retired", retired.Report()}};
 }
 
 inline Json CheckGuiObjects()
@@ -263,6 +388,7 @@ inline Json Run(const std::filesystem::path &file)
       {"last_iterator_copy", lastIterator.Report()}, {"after_iterators", afterIterators.Report()},
       {"same_file_independent_objects", true}, {"duplicate_shared_object", true},
       {"gui_lifetime", CheckGuiObjects()},
+      {"working_directory_lifetime", CheckWorkingDirectory(root, baseline)}, {"device_lifetime", CheckDeviceKinds()},
       {"unmatched_search_retired", true}, {"per_object_charge_observed", false}};
 }
 #else

@@ -184,15 +184,23 @@ inline nlohmann::json DescribeWindowsPlatformResources(const WindowsPlatformReso
   auto types = Json::object();
   for (const auto &type : handles.types)
     types[type.type] = {{"entries", type.entries}, {"objects", number(type.objects)}};
+  const auto counts = [&](const WindowsFileResourceRow &entry) {
+    return Json{{"entries", entry.entries}, {"objects", entry.objects},
+        {"linked_ucrt_entries", crt.stable ? Json(entry.linkedCrtEntries) : Json(nullptr)},
+        {"linked_ucrt_objects", crt.stable ? Json(entry.linkedCrtObjects) : Json(nullptr)}};
+  };
   auto kinds = Json::object();
+  auto diskAreas = Json::object();
+  auto deviceTypes = Json::array();
   if (files.stable)
+  {
     for (std::size_t i = 0; i < files.kinds.size(); ++i)
-    {
-      const auto &kind = files.kinds[i];
-      kinds[WindowsFileKindNames[i]] = {{"entries", kind.entries}, {"objects", kind.objects},
-          {"linked_ucrt_entries", crt.stable ? Json(kind.linkedCrtEntries) : Json(nullptr)},
-          {"linked_ucrt_objects", crt.stable ? Json(kind.linkedCrtObjects) : Json(nullptr)}};
-    }
+      kinds[WindowsFileKindNames[i]] = counts(files.kinds[i]);
+    for (std::size_t i = 0; i < files.diskAreas.size(); ++i)
+      diskAreas[WindowsDiskPathAreaNames[i]] = counts(files.diskAreas[i]);
+    for (const auto &entry : files.deviceTypes)
+      deviceTypes.push_back({{"type", entry.first}, {"storage", counts(entry.second)}});
+  }
   auto standardStreams = Json::object();
   constexpr std::array standardNames{"stdin", "stdout", "stderr"};
   for (std::size_t i = 0; i < standardNames.size(); ++i)
@@ -212,6 +220,12 @@ inline nlohmann::json DescribeWindowsPlatformResources(const WindowsPlatformReso
       {"file_resources", {
           {"status", files.stable && !handles.untyped ? "PASS" : handles.supported ? "PARTIAL" : "UNSUPPORTED"},
           {"kinds", std::move(kinds)}, {"standard_streams", std::move(standardStreams)},
+          {"working_directory", files.workingDirectory ? counts(*files.workingDirectory) : Json(nullptr)},
+          {"disk_path_areas", std::move(diskAreas)},
+          {"volume_devices", {{"status", files.stable && !handles.untyped && files.deviceQueryAvailable &&
+                                        !files.unobservedDevices.objects ? "PASS" :
+                                        handles.supported ? "PARTIAL" : "UNSUPPORTED"},
+                              {"types", std::move(deviceTypes)}, {"unobserved", counts(files.unobservedDevices)}}},
           {"ucrt", {{"status", crt.stable ? "PASS" : crt.supported ? "PARTIAL" : "UNSUPPORTED"},
                     {"stdio_slots", crt.stdioSlots}, {"allocated_dynamic_slots", crt.dynamicSlots},
                     {"active_streams", crt.activeStreams}, {"streams_without_open_descriptor", crt.streamsWithoutDescriptor},
