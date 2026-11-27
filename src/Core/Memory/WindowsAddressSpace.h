@@ -20,13 +20,20 @@ struct WindowsAddressSpace
   }
 };
 
+struct WindowsImageRegionObserver
+{
+  void *state{};
+  void (*observe)(void *, std::uintptr_t, std::uintptr_t, std::uintptr_t) noexcept{};
+};
+
 #ifdef _WIN32
 namespace windows_address_space_detail
 {
 // Count disjoint address spans in the calling process. A sequential walk
 // may see concurrent changes. Region type describes the original mapping.
 inline WindowsAddressSpace ReadRange(std::uintptr_t begin, std::uintptr_t end,
-                                     std::size_t regionLimit = 65536) noexcept
+                                     std::size_t regionLimit = 65536,
+                                     WindowsImageRegionObserver images = {}) noexcept
 {
   WindowsAddressSpace result;
   result.supported = true;
@@ -62,7 +69,11 @@ inline WindowsAddressSpace ReadRange(std::uintptr_t begin, std::uintptr_t end,
       {
       case MEM_PRIVATE: result.privateCommitted += bytes; break;
       case MEM_MAPPED: result.mappedCommitted += bytes; break;
-      case MEM_IMAGE: result.imageCommitted += bytes; break;
+      case MEM_IMAGE:
+        result.imageCommitted += bytes;
+        if (images.observe)
+          images.observe(images.state, reinterpret_cast<std::uintptr_t>(region.AllocationBase), cursor, next);
+        break;
       default: result.otherCommitted += bytes; break;
       }
       if (region.Protect & PAGE_GUARD)
@@ -85,15 +96,16 @@ inline WindowsAddressSpace ReadRange(std::uintptr_t begin, std::uintptr_t end,
 } // namespace windows_address_space_detail
 #endif
 
-inline WindowsAddressSpace ReadWindowsAddressSpace() noexcept
+inline WindowsAddressSpace ReadWindowsAddressSpace(WindowsImageRegionObserver images = {}) noexcept
 {
 #ifdef _WIN32
   SYSTEM_INFO system{};
   GetSystemInfo(&system);
   const auto last = reinterpret_cast<std::uintptr_t>(system.lpMaximumApplicationAddress);
   return windows_address_space_detail::ReadRange(
-      reinterpret_cast<std::uintptr_t>(system.lpMinimumApplicationAddress), last + 1);
+      reinterpret_cast<std::uintptr_t>(system.lpMinimumApplicationAddress), last + 1, 65536, images);
 #else
+  (void)images;
   return {};
 #endif
 }

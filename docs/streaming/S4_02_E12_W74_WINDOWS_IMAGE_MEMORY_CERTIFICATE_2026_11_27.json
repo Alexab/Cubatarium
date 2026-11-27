@@ -1,0 +1,1954 @@
+{
+  "schema": "s4-e12-w74-windows-image-memory.v1",
+  "status": "SCOPED_WINDOWS_IMAGE_MEMORY_PASS_E12_OPEN",
+  "baseline_commit": "de7ccce0fb55c29feeae90e92cce5e163d4dd2e4",
+  "prior_certificate": "S4_02_E12_W73_DESKTOP_NORMAL_SHUTDOWN_CERTIFICATE_2026_11_27.json",
+  "summary": "W74 joins committed PE image ranges from the existing VirtualQuery walk with two observations of the Windows loader list. Batched working-set queries report private and shareable resident pages for each image, and loaded-image TLS directory declarations are captured separately. A controlled DLL load and nonexecuting view of the fixture executable verify that identical filenames can represent separate mappings. Both retire and a forced query limit produces an explicitly partial observation. Flat and Full observe the same process before window initialization through normal context destruction. All 46 Release regression groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W74. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. W73 verifies normal desktop shutdown, selected GL name retirement and exact application owner expiry across Flat and Full, and fixes block-atlas release while the context is current. W74 attributes committed and resident image spans and declared module TLS at four matched desktop phases. Next, associate actual extra-module TLS blocks and runtime allocations with live thread owners, and account for retained file, platform and driver resources outside those mapped images. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows Release committed MEM_IMAGE allocations and selected working set at native desktop lifecycle phases",
+  "composition_rule": "Every committed MEM_IMAGE page participates in at most one observed allocation. Resident pages are partitioned by the Shared flag and form a subset of the queried committed spans. Image data, PSAPI process counters and WDDM charges are sequential observations. TLS template declarations describe the image fields independently of allocated TLS blocks.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/desktop/api/psapi/nf-psapi-enumprocessmodulesex",
+    "https://learn.microsoft.com/en-us/windows/win32/psapi/working-set-information",
+    "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format"
+  ],
+  "fixture": {
+    "controlled_library": {
+      "committed_bytes": 40960,
+      "executable": false,
+      "filename": "version.dll",
+      "loader_module": true,
+      "queried_bytes": 40960,
+      "resident_private_bytes": 8192,
+      "resident_shareable_bytes": 16384,
+      "tls": {
+        "raw_template_bytes": null,
+        "status": "ABSENT",
+        "zero_fill_bytes": null
+      }
+    },
+    "controlled_passive_image": {
+      "committed_bytes": 3694592,
+      "executable": false,
+      "filename": "async_io_storage_test.exe",
+      "loader_module": false,
+      "queried_bytes": 3694592,
+      "resident_private_bytes": 0,
+      "resident_shareable_bytes": 4096,
+      "tls": {
+        "raw_template_bytes": null,
+        "status": "UNOBSERVED",
+        "zero_fill_bytes": null
+      }
+    },
+    "executable_tls_matches_linked": true,
+    "snapshots": {
+      "baseline": {
+        "page_bytes": 4096,
+        "loader_modules": 17,
+        "non_loader_images": 0,
+        "tls_declarations": {
+          "async_io_storage_test.exe": {
+            "raw_template_bytes": 31416,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "KERNELBASE.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "msvcrt.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "SHELL32.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        "committed_bytes": 27123712,
+        "queried_bytes": 27123712,
+        "resident_private_bytes": 499712,
+        "resident_shareable_bytes": 5509120
+      },
+      "live": {
+        "page_bytes": 4096,
+        "loader_modules": 18,
+        "non_loader_images": 1,
+        "tls_declarations": {
+          "async_io_storage_test.exe": {
+            "raw_template_bytes": 31416,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "KERNELBASE.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "msvcrt.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "SHELL32.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        "committed_bytes": 30859264,
+        "queried_bytes": 30859264,
+        "resident_private_bytes": 507904,
+        "resident_shareable_bytes": 5529600
+      },
+      "retired": {
+        "page_bytes": 4096,
+        "loader_modules": 17,
+        "non_loader_images": 0,
+        "tls_declarations": {
+          "async_io_storage_test.exe": {
+            "raw_template_bytes": 31416,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "KERNELBASE.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "msvcrt.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "SHELL32.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        "committed_bytes": 27123712,
+        "queried_bytes": 27123712,
+        "resident_private_bytes": 499712,
+        "resident_shareable_bytes": 5509120
+      },
+      "limited": {
+        "page_bytes": 4096,
+        "loader_modules": 17,
+        "non_loader_images": 0,
+        "tls_declarations": {
+          "async_io_storage_test.exe": {
+            "raw_template_bytes": 31416,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "KERNELBASE.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "msvcrt.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          },
+          "SHELL32.dll": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        "committed_bytes": 27123712,
+        "queried_bytes": 0,
+        "resident_private_bytes": 0,
+        "resident_shareable_bytes": 0
+      }
+    }
+  },
+  "native": {
+    "flat": {
+      "flight_frames": 836,
+      "context_released": true,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "page_bytes": 4096,
+          "loader_modules": 23,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 54972416,
+          "queried_bytes": 54972416,
+          "resident_private_bytes": 761856,
+          "resident_shareable_bytes": 6275072,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 13860864,
+            "peak_working_set_bytes": 7811072,
+            "private_commit_bytes": 13852672,
+            "private_working_set_bytes": 1302528,
+            "shared_commit_bytes": 3059712,
+            "working_set_bytes": 7806976
+          },
+          "elapsed_us": 1810,
+          "wddm_sampled_segments": 4
+        },
+        "before_owner_release": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 8212480,
+          "resident_shareable_bytes": 30904320,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1232822272,
+            "peak_working_set_bytes": 545931264,
+            "private_commit_bytes": 1228267520,
+            "private_working_set_bytes": 506904576,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 538390528
+          },
+          "elapsed_us": 16839,
+          "wddm_sampled_segments": 4
+        },
+        "after_owner_release": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 8212480,
+          "resident_shareable_bytes": 30941184,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1232822272,
+            "peak_working_set_bytes": 545931264,
+            "private_commit_bytes": 1111265280,
+            "private_working_set_bytes": 372903936,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 404426752
+          },
+          "elapsed_us": 12282,
+          "wddm_sampled_segments": 4
+        },
+        "after_context_destroy": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 8212480,
+          "resident_shareable_bytes": 30969856,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1232822272,
+            "peak_working_set_bytes": 545931264,
+            "private_commit_bytes": 1053192192,
+            "private_working_set_bytes": 315670528,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 347226112
+          },
+          "elapsed_us": 11847,
+          "wddm_sampled_segments": 4
+        }
+      },
+      "new_loader_modules_after_window": [
+        "atig6pxx.dll",
+        "atio6axx.dll",
+        "bcryptprimitives.dll",
+        "cfgmgr32.dll",
+        "clbcatq.dll",
+        "coloradapterclient.dll",
+        "coremessaging.dll",
+        "coreuicomponents.dll",
+        "crypt32.dll",
+        "cryptbase.dll",
+        "devobj.dll",
+        "dinput8.dll",
+        "dwmapi.dll",
+        "icm32.dll",
+        "inputhost.dll",
+        "kernel.appcore.dll",
+        "msasn1.dll",
+        "mscms.dll",
+        "msctf.dll",
+        "ntmarta.dll",
+        "oleaut32.dll",
+        "propsys.dll",
+        "setupapi.dll",
+        "shcore.dll",
+        "userenv.dll",
+        "uxtheme.dll",
+        "version.dll",
+        "winmm.dll",
+        "wintrust.dll",
+        "wintypes.dll",
+        "ws2_32.dll",
+        "xinput1_4.dll"
+      ],
+      "retained_new_modules_after_context": [
+        {
+          "committed_bytes": 63131648,
+          "executable": false,
+          "filename": "atio6axx.dll",
+          "loader_module": true,
+          "queried_bytes": 63131648,
+          "resident_private_bytes": 860160,
+          "resident_shareable_bytes": 11370496,
+          "tls": {
+            "raw_template_bytes": 1008,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 991232,
+          "executable": false,
+          "filename": "CoreMessaging.dll",
+          "loader_module": true,
+          "queried_bytes": 991232,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 507904,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1384448,
+          "executable": false,
+          "filename": "inputhost.dll",
+          "loader_module": true,
+          "queried_bytes": 1384448,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 290816,
+          "tls": {
+            "raw_template_bytes": 336,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 647168,
+          "executable": false,
+          "filename": "uxtheme.dll",
+          "loader_module": true,
+          "queried_bytes": 647168,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 253952,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1429504,
+          "executable": false,
+          "filename": "CRYPT32.dll",
+          "loader_module": true,
+          "queried_bytes": 1429504,
+          "resident_private_bytes": 36864,
+          "resident_shareable_bytes": 196608,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 471040,
+          "executable": false,
+          "filename": "WINTRUST.dll",
+          "loader_module": true,
+          "queried_bytes": 471040,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 172032,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 712704,
+          "executable": false,
+          "filename": "mscms.dll",
+          "loader_module": true,
+          "queried_bytes": 712704,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 147456,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 4653056,
+          "executable": false,
+          "filename": "SETUPAPI.dll",
+          "loader_module": true,
+          "queried_bytes": 4653056,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 135168,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 184320,
+          "executable": false,
+          "filename": "atig6pxx.dll",
+          "loader_module": true,
+          "queried_bytes": 184320,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 131072,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 532480,
+          "executable": false,
+          "filename": "bcryptPrimitives.dll",
+          "loader_module": true,
+          "queried_bytes": 532480,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 135168,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1134592,
+          "executable": false,
+          "filename": "MSCTF.dll",
+          "loader_module": true,
+          "queried_bytes": 1134592,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 118784,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 839680,
+          "executable": false,
+          "filename": "OLEAUT32.dll",
+          "loader_module": true,
+          "queried_bytes": 839680,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 114688,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 3518464,
+          "executable": false,
+          "filename": "CoreUIComponents.dll",
+          "loader_module": true,
+          "queried_bytes": 3518464,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 110592,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 708608,
+          "executable": false,
+          "filename": "shcore.dll",
+          "loader_module": true,
+          "queried_bytes": 708608,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 110592,
+          "tls": {
+            "raw_template_bytes": 12,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 999424,
+          "executable": false,
+          "filename": "PROPSYS.dll",
+          "loader_module": true,
+          "queried_bytes": 999424,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 102400,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 188416,
+          "executable": false,
+          "filename": "dwmapi.dll",
+          "loader_module": true,
+          "queried_bytes": 188416,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 98304,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 319488,
+          "executable": false,
+          "filename": "cfgmgr32.dll",
+          "loader_module": true,
+          "queried_bytes": 319488,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 98304,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 692224,
+          "executable": false,
+          "filename": "clbcatq.dll",
+          "loader_module": true,
+          "queried_bytes": 692224,
+          "resident_private_bytes": 32768,
+          "resident_shareable_bytes": 81920,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1404928,
+          "executable": false,
+          "filename": "wintypes.dll",
+          "loader_module": true,
+          "queried_bytes": 1404928,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 73728,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 282624,
+          "executable": false,
+          "filename": "dinput8.dll",
+          "loader_module": true,
+          "queried_bytes": 282624,
+          "resident_private_bytes": 28672,
+          "resident_shareable_bytes": 57344,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 208896,
+          "executable": false,
+          "filename": "DEVOBJ.dll",
+          "loader_module": true,
+          "queried_bytes": 208896,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 69632,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 188416,
+          "executable": false,
+          "filename": "USERENV.dll",
+          "loader_module": true,
+          "queried_bytes": 188416,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 57344,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 438272,
+          "executable": false,
+          "filename": "WS2_32.dll",
+          "loader_module": true,
+          "queried_bytes": 438272,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 53248,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 159744,
+          "executable": false,
+          "filename": "WINMM.dll",
+          "loader_module": true,
+          "queried_bytes": 159744,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 208896,
+          "executable": false,
+          "filename": "ntmarta.dll",
+          "loader_module": true,
+          "queried_bytes": 208896,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 69632,
+          "executable": false,
+          "filename": "xinput1_4.dll",
+          "loader_module": true,
+          "queried_bytes": 69632,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 282624,
+          "executable": false,
+          "filename": "icm32.dll",
+          "loader_module": true,
+          "queried_bytes": 282624,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 40960,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 73728,
+          "executable": false,
+          "filename": "kernel.appcore.dll",
+          "loader_module": true,
+          "queried_bytes": 73728,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 40960,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 69632,
+          "executable": false,
+          "filename": "ColorAdapterClient.dll",
+          "loader_module": true,
+          "queried_bytes": 69632,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 28672,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 49152,
+          "executable": false,
+          "filename": "CRYPTBASE.DLL",
+          "loader_module": true,
+          "queried_bytes": 49152,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 24576,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 73728,
+          "executable": false,
+          "filename": "MSASN1.dll",
+          "loader_module": true,
+          "queried_bytes": 73728,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 24576,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 40960,
+          "executable": false,
+          "filename": "VERSION.dll",
+          "loader_module": true,
+          "queried_bytes": 40960,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 16384,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        }
+      ]
+    },
+    "full": {
+      "flight_frames": 525,
+      "context_released": true,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "page_bytes": 4096,
+          "loader_modules": 23,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 54972416,
+          "queried_bytes": 54972416,
+          "resident_private_bytes": 761856,
+          "resident_shareable_bytes": 6270976,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 13864960,
+            "peak_working_set_bytes": 7811072,
+            "private_commit_bytes": 13856768,
+            "private_working_set_bytes": 1306624,
+            "shared_commit_bytes": 3059712,
+            "working_set_bytes": 7806976
+          },
+          "elapsed_us": 2567,
+          "wddm_sampled_segments": 4
+        },
+        "before_owner_release": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 9871360,
+          "resident_shareable_bytes": 30818304,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1467654144,
+            "peak_working_set_bytes": 735739904,
+            "private_commit_bytes": 1435353088,
+            "private_working_set_bytes": 653942784,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 685334528
+          },
+          "elapsed_us": 17412,
+          "wddm_sampled_segments": 4
+        },
+        "after_owner_release": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 9871360,
+          "resident_shareable_bytes": 30851072,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1467654144,
+            "peak_working_set_bytes": 735739904,
+            "private_commit_bytes": 1286729728,
+            "private_working_set_bytes": 490823680,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 522248192
+          },
+          "elapsed_us": 14661,
+          "wddm_sampled_segments": 4
+        },
+        "after_context_destroy": {
+          "page_bytes": 4096,
+          "loader_modules": 55,
+          "non_loader_images": 0,
+          "tls_declarations": {
+            "Cubatarium.exe": {
+              "raw_template_bytes": 34824,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "atio6axx.dll": {
+              "raw_template_bytes": 1008,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "inputhost.dll": {
+              "raw_template_bytes": 336,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "mscms.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CoreUIComponents.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "dwmapi.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "CRYPT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "KERNELBASE.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "msvcrt.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "SHELL32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "shcore.dll": {
+              "raw_template_bytes": 12,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "OLEAUT32.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "combase.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            },
+            "MSCTF.dll": {
+              "raw_template_bytes": 8,
+              "status": "DECLARED",
+              "zero_fill_bytes": 0
+            }
+          },
+          "committed_bytes": 141062144,
+          "queried_bytes": 141062144,
+          "resident_private_bytes": 9871360,
+          "resident_shareable_bytes": 30879744,
+          "process": {
+            "extended_observed": true,
+            "observed": true,
+            "peak_private_commit_bytes": 1467654144,
+            "peak_working_set_bytes": 735739904,
+            "private_commit_bytes": 1226588160,
+            "private_working_set_bytes": 429248512,
+            "shared_commit_bytes": 40181760,
+            "working_set_bytes": 460701696
+          },
+          "elapsed_us": 13050,
+          "wddm_sampled_segments": 4
+        }
+      },
+      "new_loader_modules_after_window": [
+        "atig6pxx.dll",
+        "atio6axx.dll",
+        "bcryptprimitives.dll",
+        "cfgmgr32.dll",
+        "clbcatq.dll",
+        "coloradapterclient.dll",
+        "coremessaging.dll",
+        "coreuicomponents.dll",
+        "crypt32.dll",
+        "cryptbase.dll",
+        "devobj.dll",
+        "dinput8.dll",
+        "dwmapi.dll",
+        "icm32.dll",
+        "inputhost.dll",
+        "kernel.appcore.dll",
+        "msasn1.dll",
+        "mscms.dll",
+        "msctf.dll",
+        "ntmarta.dll",
+        "oleaut32.dll",
+        "propsys.dll",
+        "setupapi.dll",
+        "shcore.dll",
+        "userenv.dll",
+        "uxtheme.dll",
+        "version.dll",
+        "winmm.dll",
+        "wintrust.dll",
+        "wintypes.dll",
+        "ws2_32.dll",
+        "xinput1_4.dll"
+      ],
+      "retained_new_modules_after_context": [
+        {
+          "committed_bytes": 63131648,
+          "executable": false,
+          "filename": "atio6axx.dll",
+          "loader_module": true,
+          "queried_bytes": 63131648,
+          "resident_private_bytes": 860160,
+          "resident_shareable_bytes": 11583488,
+          "tls": {
+            "raw_template_bytes": 1008,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 991232,
+          "executable": false,
+          "filename": "CoreMessaging.dll",
+          "loader_module": true,
+          "queried_bytes": 991232,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 507904,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1384448,
+          "executable": false,
+          "filename": "inputhost.dll",
+          "loader_module": true,
+          "queried_bytes": 1384448,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 290816,
+          "tls": {
+            "raw_template_bytes": 336,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 647168,
+          "executable": false,
+          "filename": "uxtheme.dll",
+          "loader_module": true,
+          "queried_bytes": 647168,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 253952,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1429504,
+          "executable": false,
+          "filename": "CRYPT32.dll",
+          "loader_module": true,
+          "queried_bytes": 1429504,
+          "resident_private_bytes": 36864,
+          "resident_shareable_bytes": 196608,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 471040,
+          "executable": false,
+          "filename": "WINTRUST.dll",
+          "loader_module": true,
+          "queried_bytes": 471040,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 172032,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 712704,
+          "executable": false,
+          "filename": "mscms.dll",
+          "loader_module": true,
+          "queried_bytes": 712704,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 147456,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 4653056,
+          "executable": false,
+          "filename": "SETUPAPI.dll",
+          "loader_module": true,
+          "queried_bytes": 4653056,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 135168,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 184320,
+          "executable": false,
+          "filename": "atig6pxx.dll",
+          "loader_module": true,
+          "queried_bytes": 184320,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 131072,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 532480,
+          "executable": false,
+          "filename": "bcryptPrimitives.dll",
+          "loader_module": true,
+          "queried_bytes": 532480,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 135168,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1134592,
+          "executable": false,
+          "filename": "MSCTF.dll",
+          "loader_module": true,
+          "queried_bytes": 1134592,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 118784,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 839680,
+          "executable": false,
+          "filename": "OLEAUT32.dll",
+          "loader_module": true,
+          "queried_bytes": 839680,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 114688,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 3518464,
+          "executable": false,
+          "filename": "CoreUIComponents.dll",
+          "loader_module": true,
+          "queried_bytes": 3518464,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 110592,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 708608,
+          "executable": false,
+          "filename": "shcore.dll",
+          "loader_module": true,
+          "queried_bytes": 708608,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 110592,
+          "tls": {
+            "raw_template_bytes": 12,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 999424,
+          "executable": false,
+          "filename": "PROPSYS.dll",
+          "loader_module": true,
+          "queried_bytes": 999424,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 102400,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 188416,
+          "executable": false,
+          "filename": "dwmapi.dll",
+          "loader_module": true,
+          "queried_bytes": 188416,
+          "resident_private_bytes": 24576,
+          "resident_shareable_bytes": 98304,
+          "tls": {
+            "raw_template_bytes": 8,
+            "status": "DECLARED",
+            "zero_fill_bytes": 0
+          }
+        },
+        {
+          "committed_bytes": 319488,
+          "executable": false,
+          "filename": "cfgmgr32.dll",
+          "loader_module": true,
+          "queried_bytes": 319488,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 98304,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 692224,
+          "executable": false,
+          "filename": "clbcatq.dll",
+          "loader_module": true,
+          "queried_bytes": 692224,
+          "resident_private_bytes": 32768,
+          "resident_shareable_bytes": 81920,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 1404928,
+          "executable": false,
+          "filename": "wintypes.dll",
+          "loader_module": true,
+          "queried_bytes": 1404928,
+          "resident_private_bytes": 20480,
+          "resident_shareable_bytes": 73728,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 282624,
+          "executable": false,
+          "filename": "dinput8.dll",
+          "loader_module": true,
+          "queried_bytes": 282624,
+          "resident_private_bytes": 28672,
+          "resident_shareable_bytes": 57344,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 208896,
+          "executable": false,
+          "filename": "DEVOBJ.dll",
+          "loader_module": true,
+          "queried_bytes": 208896,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 69632,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 188416,
+          "executable": false,
+          "filename": "USERENV.dll",
+          "loader_module": true,
+          "queried_bytes": 188416,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 57344,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 438272,
+          "executable": false,
+          "filename": "WS2_32.dll",
+          "loader_module": true,
+          "queried_bytes": 438272,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 53248,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 159744,
+          "executable": false,
+          "filename": "WINMM.dll",
+          "loader_module": true,
+          "queried_bytes": 159744,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 208896,
+          "executable": false,
+          "filename": "ntmarta.dll",
+          "loader_module": true,
+          "queried_bytes": 208896,
+          "resident_private_bytes": 16384,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 69632,
+          "executable": false,
+          "filename": "xinput1_4.dll",
+          "loader_module": true,
+          "queried_bytes": 69632,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 49152,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 282624,
+          "executable": false,
+          "filename": "icm32.dll",
+          "loader_module": true,
+          "queried_bytes": 282624,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 40960,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 73728,
+          "executable": false,
+          "filename": "kernel.appcore.dll",
+          "loader_module": true,
+          "queried_bytes": 73728,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 40960,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 69632,
+          "executable": false,
+          "filename": "ColorAdapterClient.dll",
+          "loader_module": true,
+          "queried_bytes": 69632,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 28672,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 49152,
+          "executable": false,
+          "filename": "CRYPTBASE.DLL",
+          "loader_module": true,
+          "queried_bytes": 49152,
+          "resident_private_bytes": 12288,
+          "resident_shareable_bytes": 24576,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 73728,
+          "executable": false,
+          "filename": "MSASN1.dll",
+          "loader_module": true,
+          "queried_bytes": 73728,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 24576,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        },
+        {
+          "committed_bytes": 40960,
+          "executable": false,
+          "filename": "VERSION.dll",
+          "loader_module": true,
+          "queried_bytes": 40960,
+          "resident_private_bytes": 8192,
+          "resident_shareable_bytes": 16384,
+          "tls": {
+            "raw_template_bytes": null,
+            "status": "ABSENT",
+            "zero_fill_bytes": null
+          }
+        }
+      ]
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "3314e9246ff1c6e33a68d4c6739c10a6bac8990aa48549097630df2d45f68f98",
+  "source_sha256_raw": {
+    "src/App/Platform/AppRunner.cpp": "9521f7bfd2604582d3cc3ad442fbe93a4b884ab3aaacfdfa5d359409a69313a6",
+    "src/App/Platform/DesktopShutdownCheckpoint.h": "ac361ba4c664fadc18028409756cd5cb7064104df8354e4887d5b82e31e4fec1",
+    "src/App/Platform/WindowManager.cpp": "256d0560280384ee057c56499d81d94b21110ac9873240e456dc93f9eed908f6",
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "10c6c1c958088e5326df18d95580e91e7655136cd327ec5ffea44a224b740e7c",
+    "src/Core/Memory/WindowsAddressSpace.h": "3ff6767aa18160d548610d8c5925f564885d557bd9c075f343cd96129a4c5c1f",
+    "src/Core/Memory/WindowsImageMemory.h": "9b9ebb196975ad9697a53b44ecfee2e3be82f6b4ac2bef5b42fbdbea92e36fb2",
+    "src/Test/AsyncIoStorageTest.cpp": "1efecb05ada080755a612d56e4a0ccb575a470215d286099859cd9851fd84f3a",
+    "src/Test/WindowsImageMemoryFixture.h": "35d9e64f53020427dbb5730ca8fa7ca2c34350ea81686ac19726f60e29c7d5a8"
+  },
+  "desktop_exe_sha256": "ac7fdb9439bac35cf7a2535dd298bbb72399e418a314616bcdd36bdb6897cdbb",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-image-memory-provenance.json": "c7e4d8f6e368a8b862a8484ef6ee644e0eb18946b50aa4c53af4a0791596d3ce",
+    "build/desktop-msvc/s4-image-memory-frozen-source.json": "731a039ba995faa1b5ebbb7383b4dc9ab2eb978b7376558dbd39d2cc166546c1",
+    "build/desktop-msvc/s4-image-memory-regressions.json": "b97ba4e658cabd4a3fb93277689908a44861dfa2e6747a1e635850b22fe8e417",
+    "build/desktop-msvc/s4-image-memory-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-image-memory-focused.json": "97f430437405388290ad92dce4ceafd6feb197884ed1cb6f7b27d78a0ded36a1",
+    "build/desktop-msvc/s4-image-memory-io-owners.json": "e846bbb938f773e11ec9572c3dd379220bcb04d2643543806415d1856865e0a9",
+    "build/desktop-msvc/s4-image-memory-flat-native/smoke-verdict.json": "7f089972c00572935acbe02f2518007a2b9943e730ea956af181c856d9c636d9",
+    "build/desktop-msvc/s4-image-memory-flat-native/flight_sim_report.json": "85cf721b6e6512601c7a56ca60d6e9bb73f39d77b3b443ec42a231e661d7e037",
+    "build/desktop-msvc/s4-image-memory-flat-native/desktop-normal-shutdown.json": "09fc7c6ea50938aeff4850c005638f36d2b0760074227765519ecb7cf318df5c",
+    "build/desktop-msvc/s4-image-memory-flat-native/legacy-gates.json": "3261f35d14cefd175f955f45f534f3c6d4329492fb1ca40c2edbfe7ad61a225b",
+    "build/desktop-msvc/s4-image-memory-flat-native/route.json": "9460069399f6bdaff4104246f835e38f6717b299ab054ddc6a75de93dcd00e9a",
+    "build/desktop-msvc/s4-image-memory-flat-native/runner.log": "63661340ab0c7b9e28dfe5c9814394eec3af46cd30ad71906dbb2a4794bd22a9",
+    "build/desktop-msvc/s4-image-memory-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-image-memory-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-image-memory-full-native/smoke-verdict.json": "c19db55ee9f2d6954f06596212d589c8b86c91e465d1345ba9140218d7e12d5f",
+    "build/desktop-msvc/s4-image-memory-full-native/flight_sim_report.json": "1c61a8456f41fc974319bd4514b1dc33a4aa0c6dde8e02bef2b37f3a67727d59",
+    "build/desktop-msvc/s4-image-memory-full-native/desktop-normal-shutdown.json": "18d31b07f01bddc6b8034c9978fb042249927d9d33445e4c5d55a75c3e863ca2",
+    "build/desktop-msvc/s4-image-memory-full-native/legacy-gates.json": "70a92269ae7d71fdcbfb3f7a8d21853872f6763088a2eb619d44d6ecb51c8d6e",
+    "build/desktop-msvc/s4-image-memory-full-native/route.json": "2c9cfe750bd86711886780d7e49aa2bc11d0fc39558406e2fcc4140533a6ac6f",
+    "build/desktop-msvc/s4-image-memory-full-native/runner.log": "96e572b8cfb1e45639912f465e8beb3216d7141fa4cdde7f5a864d789d4cfe2d",
+    "build/desktop-msvc/s4-image-memory-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

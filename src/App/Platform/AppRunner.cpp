@@ -1787,6 +1787,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     safety_timeout = in_game_seconds + 30.0;
   }
 
+  const bool normalShutdown = options.NormalShutdown;
+  WindowsMemoryCheckpoint beforeWindow;
+  if (normalShutdown)
+    beforeWindow = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages);
   UDesktopPlatformWindow window;
   const bool ok = options.VisibleWindow
                       ? window.Initialize(1280, 720, "flight-sim")
@@ -1800,7 +1804,6 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   // frame starves streaming (wall≈3s) and invalidates travel/stop gates.
   window.SetAutosaveEnabled(false);
 
-  const bool normalShutdown = options.NormalShutdown;
   std::filesystem::path shutdownReportPath;
   int result = 1;
   try
@@ -3604,6 +3607,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   try
   {
     DesktopShutdownCheckpoint checkpoint;
+    checkpoint.beforeWindow = std::move(beforeWindow);
     window.Shutdown(checkpoint);
     std::ofstream report(shutdownReportPath);
     report << DescribeDesktopShutdown(checkpoint).dump(2) << '\n';
