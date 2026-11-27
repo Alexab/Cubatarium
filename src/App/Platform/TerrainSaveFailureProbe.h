@@ -4,6 +4,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Progress/IUProgressSink.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "World/Core/World.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
@@ -15,6 +16,7 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "World/Lighting/IULightingPipeline.h"
+#include "World/Lighting/LightCacheCertificate.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/RelightResultInstall.h"
@@ -329,6 +331,44 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               "cold flag replay restores the deferred entry with the current signature");
       require(!persistence.IsColumnLightComplete(flagged),
               "a persisted flag alone does not certify live light coverage");
+      const auto flags_path = folder / "column_light.json";
+      std::string committed_flags;
+      {
+        std::ifstream file(flags_path, std::ios::binary);
+        committed_flags.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+      }
+      const auto install_flags = [&](std::string_view text) {
+        std::ofstream file(flags_path, std::ios::binary | std::ios::trunc);
+        file.write(text.data(), static_cast<std::streamsize>(text.size()));
+        file.close();
+        require(file.good(), "install physical flag reader control");
+      };
+      std::vector<glm::ivec2> large_flags{flagged};
+      for (int n = 0; n < 1024; ++n)
+        large_flags.emplace_back(-1 - n, 23);
+      const auto grown_flags = EncodeColumnLightCache(std::move(large_flags), persistence.LightCompleteSignature).dump();
+      install_flags(grown_flags);
+      persistence.LoadColumnLightFlags();
+      const auto grown_buckets = persistence.LightCompleteColumns.bucket_count();
+      StlSourceStorage grown_storage;
+      grown_storage.Hash(persistence.LightCompleteColumns);
+      require(persistence.LightCompleteColumns.size() == 1025 && persistence.LightCompleteColumns.count(flagged) &&
+                  !persistence.IsColumnLightComplete(flagged) && grown_buckets >= 1025,
+              "physical flags publish their set without granting live coverage");
+      install_flags(grown_flags + '\0' + "trailing");
+      persistence.LoadColumnLightFlags();
+      const auto reset_buckets = persistence.LightCompleteColumns.bucket_count();
+      require(persistence.LightCompleteColumns.empty() && persistence.LightCompleteSignature.empty() &&
+                  reset_buckets < grown_buckets,
+              "a refused physical flag result retires the old set and its bucket high water");
+      install_flags(committed_flags);
+      persistence.LoadColumnLightFlags();
+      require(persistence.LightCompleteColumns.count(flagged) && !persistence.IsColumnLightComplete(flagged),
+              "the original physical flags reload after refusal");
+      report["flag_read_publication"] = {{"status", "PASS"}, {"published", 1025},
+          {"grown_buckets", grown_buckets}, {"reset_buckets", reset_buckets},
+          {"grown_requested_heap", grown_storage.bytes.requested}, {"heap_supported", grown_storage.bytes.supported},
+          {"invalid_tail_refused", true}, {"retry", true}};
       report["bounded_disk_write_admission"] = {{"status", "PASS"}, {"write_limit", writes},
           {"required_writes", target_writes}, {"rejected_with_free_slots", target_writes - 1},
           {"bounded_while_active", bounded_while_active}, {"cold_edit", true}, {"deferred_flag_revision", true},

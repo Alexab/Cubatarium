@@ -28,8 +28,8 @@ struct IVec2Hash
 {
   std::size_t operator()(const glm::ivec2 &v) const noexcept
   {
-    return std::hash<int64_t>{}((static_cast<int64_t>(v.x) << 32) ^
-                                static_cast<uint32_t>(v.y));
+    return std::hash<uint64_t>{}((uint64_t{static_cast<uint32_t>(v.x)} << 32) |
+                                 static_cast<uint32_t>(v.y));
   }
 };
 
@@ -416,6 +416,7 @@ private:
   glm::ivec2 LastDeferredFarAgeServiceWorldKey{};
   bool LastDeferredFarAgeServiceWorldKeyValid{false};
   /// Columns whose disk lightmap is trusted (lighting_complete).
+  void ResetLightCompleteColumns();
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   SectionLightRestoreQueue PendingSectionLightRestores;
   bool LightCompleteDirty{false};

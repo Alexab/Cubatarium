@@ -1014,14 +1014,15 @@ UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
     if (!file)
       return {};
     auto receipts = std::make_shared<PersistedColumnLight>();
-    column_light_json::Source source(file);
+    BufferedJsonStream source(file, kMaxColumnLightBytes);
     constexpr auto stack_bytes = sizeof(source) + sizeof(column_light_json::Reader);
     ReceiptReadObservation observation{probe, *receipts, stack_bytes};
     const IoCodecProbe section_probe{&observation, ReceiptReadObservation::Sample,
                                     ReceiptReadObservation::Window};
     column_light_json::Reader reader(column, *receipts, probe ? &section_probe : nullptr);
     const bool valid = RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] {
-      nlohmann::detail::parser<json, column_light_json::Input> parser{column_light_json::Input{source, reader}};
+      using Input = BufferedJsonInput<column_light_json::Reader>;
+      nlohmann::detail::parser<json, Input> parser{Input{source, reader}};
       return parser.sax_parse(&reader, true) && source.Complete() && reader.Complete();
     });
     if (!valid)

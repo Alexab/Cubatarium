@@ -1,52 +1,11 @@
 #pragma once
 
+#include "World/IO/BufferedJsonStream.h"
 #include "World/Lighting/PersistedSectionLight.h"
-#include <istream>
 #include <type_traits>
 
 namespace cutum::column_light_json
 {
-// Read the actual stream up to the existing v1 file extent, including its
-// trailing whitespace. The extra byte distinguishes EOF from an overrun.
-class Source
-{
-public:
-  explicit Source(std::istream &file) : File(file) {}
-
-  std::char_traits<char>::int_type Read()
-  {
-    using Traits = std::char_traits<char>;
-    if (Next == End)
-    {
-      if (File.eof() || Failed)
-        return Traits::eof();
-      File.read(Buffer.data(), std::min(Buffer.size(), Remaining + 1));
-      const auto count = static_cast<size_t>(File.gcount());
-      if (count > Remaining || File.bad() || (!File && !File.eof()))
-      {
-        Failed = true;
-        return Traits::eof();
-      }
-      Next = 0;
-      End = count;
-      Remaining -= count;
-      if (!count)
-        return Traits::eof();
-    }
-    const char value = Buffer[Next++];
-    // This is a binary stream, so a raw NUL is a byte of invalid JSON.
-    return Traits::to_int_type(value == '\0' ? '\x01' : value);
-  }
-
-  bool Complete() const noexcept { return !Failed && Next == End && File.eof(); }
-
-private:
-  std::istream &File;
-  std::array<char, 4096> Buffer;
-  size_t Next{0}, End{0}, Remaining{kMaxColumnLightBytes};
-  bool Failed{false};
-};
-
 class Reader : public nlohmann::json_sax<nlohmann::json>
 {
 public:
@@ -378,17 +337,4 @@ private:
   bool TupleValid{false}, FieldsValid{false}, InputsValid{false};
 };
 
-struct Input
-{
-  using char_type = char;
-  static constexpr bool cutum_collect_raw_lexer_diagnostics = false;
-  static constexpr size_t cutum_numeric_token_limit = 4096;
-
-  size_t cutum_string_token_limit(bool is_object_value) const noexcept
-  { return Sax.StringLimit(is_object_value); }
-  std::char_traits<char>::int_type get_character() { return Stream.Read(); }
-
-  Source &Stream;
-  const Reader &Sax;
-};
 } // namespace cutum::column_light_json

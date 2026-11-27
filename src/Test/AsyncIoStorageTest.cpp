@@ -13,7 +13,9 @@
 #include "Test/WindowsExecutableTlsFixture.h"
 #include "Test/WindowsIoResourceFixture.h"
 #include "World/IO/AsyncChunkIO.h"
+#include "World/IO/ColumnLightFlagReader.h"
 #include "World/Lighting/LightCacheCertificate.h"
+#include "World/Persistence/WorldPersistence.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -108,6 +110,116 @@ nlohmann::json CheckFlagWriter(const std::filesystem::path &root)
   check(mixed, standard);
   return {{"empty", empty}, {"signed_escaped", edges}, {"dense", large},
           {"temporary_refusal_preserved", true}, {"invalid_utf8_preserved", true}, {"retry", true}};
+}
+
+nlohmann::json CheckFlagReader(const std::filesystem::path &root)
+{
+  using cutum::io_codec_fixture::Require;
+  using Columns = std::unordered_set<glm::ivec2, cutum::IVec2Hash>;
+  const std::string signature = "light-v6:0:-64:319:18446744073709551615";
+  Require(std::filesystem::create_directories(root), "flag reader fixture requires a fresh directory");
+  const auto path = root / "column_light.json";
+  const auto measure = [&](std::string_view text, bool valid, size_t expected) {
+    {
+      std::ofstream file(path, std::ios::binary);
+      file.write(text.data(), static_cast<std::streamsize>(text.size()));
+      file.close();
+      Require(file.good(), "install physical flag input");
+    }
+    size_t peak = 0, live = 0, buckets = 0, attempts = 0;
+    {
+      observation::Scope allocations;
+      {
+        Columns published;
+        cutum::ColumnLightFlagRead status;
+        {
+          std::ifstream file(path, std::ios::binary);
+          status = cutum::ReadColumnLightFlags(file, signature, published);
+        }
+        Require((status == cutum::ColumnLightFlagRead::Loaded) == valid && published.size() == expected,
+                "physical flag input has the expected verdict and size");
+        if (valid)
+          Require(published.count({INT_MIN, INT_MAX}) == 1, "retain the signed coordinate boundary");
+        cutum::StlSourceStorage model;
+        model.Hash(published);
+        live = observation::State.live;
+        peak = observation::State.peak;
+        attempts = observation::State.attempts;
+        buckets = published.bucket_count();
+        Require(!model.bytes.supported || live == model.bytes.requested,
+                "the published flag set matches the independent requested allocation census");
+      }
+      Require(!observation::State.live && !observation::State.blocks, "flag reader backing retires");
+    }
+    return nlohmann::json{{"file_bytes", text.size()}, {"rows", expected}, {"peak", peak},
+                          {"output_heap", live}, {"buckets", buckets}, {"attempts", attempts}};
+  };
+
+  const auto compact = cutum::EncodeColumnLightCache({{INT_MIN, INT_MAX}}, signature).dump();
+  const auto compact_result = measure(compact, true, 1);
+  std::vector<glm::ivec2> dense{{INT_MIN, INT_MAX}};
+  for (int i = 0; i < 32767; ++i)
+    dense.emplace_back(i - 16384, i % 128 - 64);
+  const auto dense_result = measure(cutum::EncodeColumnLightCache(dense, signature).dump(), true, dense.size());
+  std::string extension = compact.substr(0, compact.size() - 1) + R"(,"ignored":[)";
+  for (int i = 0; i < 262144; ++i)
+    extension += "null,";
+  extension += "\"" + std::string(131072, 'x') + "\"]}";
+  const auto extension_result = measure(extension, true, 1);
+  std::string repeated = R"({"complete":[[-2147483648,2147483647])";
+  for (int i = 0; i < 32768; ++i)
+    repeated += ",[-2147483648,2147483647]";
+  repeated += compact.substr(compact.find("],\"format_version\""));
+  const auto repeated_result = measure(repeated, true, 1);
+  const std::string replaced = R"({"complete":[false],"format_version":3,"light_signature":false,)" + compact.substr(1);
+  measure(replaced, true, 1);
+  measure(compact.substr(0, compact.size() - 1) + R"(,"complete":[[2147483648,0]]})", false, 0);
+  measure(compact.substr(0, compact.size() - 1) + R"(,"complete":[[false,0]]})", false, 0);
+  measure(compact.substr(0, compact.size() - 1) + ",\"light_signature\":\"" + signature + "x\"}", false, 0);
+  measure(compact + '\0' + "trailing", false, 0);
+  measure(compact + "{", false, 0);
+  const auto nested = [&](size_t levels) {
+    return compact.substr(0, compact.size() - 1) + R"(,"ignored":)" + std::string(levels, '[') +
+           "null" + std::string(levels, ']') + "}";
+  };
+  measure(nested(16384), true, 1);
+  measure(nested(16385), false, 0);
+  measure(compact, true, 1);
+  const auto allocation_prefix = [&](size_t prefix) {
+    std::istringstream file(compact);
+    std::optional<Columns> published(std::in_place);
+    published->insert({2, 3});
+    bool refused = false;
+    observation::Scope allocations(prefix);
+    try
+    {
+      Require(cutum::ReadColumnLightFlags(file, signature, *published) == cutum::ColumnLightFlagRead::Loaded,
+              "the staged flag candidate publishes after EOF");
+    }
+    catch (const std::bad_alloc &) { refused = true; }
+    const auto attempts = observation::State.attempts;
+    Require(published->size() == 1 && (refused ? published->count({2, 3}) : published->count({INT_MIN, INT_MAX})),
+            "allocation refusal preserves the exact old set or commits the exact replacement");
+    Require(refused == (prefix != SIZE_MAX), "each allocation prefix forces the expected refusal");
+    published.reset();
+    Require(!observation::State.live && !observation::State.blocks, "staged flag allocation backing retires");
+    return attempts;
+  };
+  const auto refusal_count = allocation_prefix(SIZE_MAX);
+  for (size_t i = 0; i < refusal_count; ++i)
+    allocation_prefix(i);
+  allocation_prefix(SIZE_MAX);
+  Require(repeated_result["attempts"] == compact_result["attempts"],
+          "duplicate coordinate lookup avoids making new nodes");
+#ifdef CUBATARIUM_JSON_LEXER_OVERRIDES
+  Require(extension_result["peak"] == compact_result["peak"] && repeated_result["peak"] == compact_result["peak"],
+          "ignored extension bytes and duplicate rows retain only the compact backing");
+#endif
+  return {{"compact", compact_result}, {"dense", dense_result},
+          {"ignored_extension", extension_result}, {"repeated_row", repeated_result},
+          {"invalid_final_duplicate", true}, {"trailing_input_refused", true}, {"retry", true},
+          {"duplicate_last_wins", true}, {"depth_control", true}, {"raw_nul_refused", true},
+          {"allocation_refusals", refusal_count}};
 }
 
 nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
@@ -331,6 +443,7 @@ int main(int argc, char **argv)
     const auto streams = cutum::io_codec_fixture::CheckFileStreams(folder + "-streams");
     const auto launch = CheckWorkerLaunchAllocations();
     const auto flag_writer = CheckFlagWriter(folder + "-flags");
+    const auto flag_reader = CheckFlagReader(folder + "-flag-reader");
     auto result = cutum::RunAsyncIoStorageProbe(folder);
     const auto stdio = std::filesystem::path(folder) / "stdio.bin";
     result["crt_file_tables"] = CheckCrtFileTables(stdio);
@@ -357,6 +470,7 @@ int main(int argc, char **argv)
     result["receipt_stream_limits"] = receipt_stream;
     result["ordinary_receipt_restore_queue"] = receipt_restore;
     result["ordinary_flag_writer"] = flag_writer;
+    result["ordinary_flag_reader"] = flag_reader;
     result["ordinary_file_streams"] = streams;
     result["ordinary_worker_launch"] = launch;
     std::ofstream output(report);

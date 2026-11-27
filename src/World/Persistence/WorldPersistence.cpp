@@ -28,6 +28,7 @@
 #include "World/Core/World.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/IO/TerrainSliceLoad.h"
+#include "World/IO/ColumnLightFlagReader.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/LightCacheCertificate.h"
 #include "World/Math/BlockTypes.h"
@@ -310,7 +311,7 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
   FailedColumnRetryAfter.clear();
   UnloadSaveReceipts.clear();
   PendingSectionLightRestores.Clear();
-  LightCompleteColumns.clear();
+  ResetLightCompleteColumns();
   LightCompleteSignature.clear();
   LightCompleteDirty = false;
   LightCompleteLoaded = false;
@@ -428,7 +429,7 @@ bool UWorldPersistence::EnsureLightCacheSignatureCurrent()
     return false;
   if (LightCompleteSignature != signature)
   {
-    LightCompleteColumns.clear();
+    ResetLightCompleteColumns();
     LightCompleteSignature = signature;
     LightCompleteDirty = true;
     ++LightCompleteRevision;
@@ -491,9 +492,21 @@ void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz,
   }
 }
 
-void UWorldPersistence::LoadColumnLightFlags()
+void UWorldPersistence::ResetLightCompleteColumns()
 {
   LightCompleteColumns.clear();
+  // Retire the previous binding's high-water bucket array. The cleared set
+  // can still be reused if the replacement empty table cannot be allocated.
+  if (LightCompleteColumns.bucket_count() > 8)
+  {
+    try { decltype(LightCompleteColumns){}.swap(LightCompleteColumns); }
+    catch (const std::bad_alloc &) {}
+  }
+}
+
+void UWorldPersistence::LoadColumnLightFlags()
+{
+  ResetLightCompleteColumns();
   LightCompleteSignature.clear();
   LightCompleteDirty = false;
   LightCompleteLoaded = true;
@@ -522,27 +535,30 @@ void UWorldPersistence::LoadColumnLightFlags()
   }
   try
   {
-    std::ifstream file(path);
+    std::ifstream file(path, std::ios::binary);
     if (!file.is_open())
     {
       log_load("open_failed");
       return;
     }
-    const json data = json::parse(file);
-    const auto &signature = CurrentLightCacheSignature();
-    const auto columns = DecodeColumnLightCache(data, signature);
-    if (!columns)
+    auto signature = CurrentLightCacheSignature();
+    switch (ReadColumnLightFlags(file, signature, LightCompleteColumns))
     {
+    case ColumnLightFlagRead::Loaded:
+      LightCompleteSignature.swap(signature);
+      log_load("loaded");
+      break;
+    case ColumnLightFlagRead::InvalidDocument:
+      log_load("parse_failed");
+      break;
+    case ColumnLightFlagRead::Incompatible:
       log_load("signature_or_schema_mismatch");
-      return;
+      break;
     }
-    LightCompleteSignature = signature;
-    LightCompleteColumns.insert(columns->begin(), columns->end());
-    log_load("loaded");
   }
-  catch (const json::exception &)
+  catch (const std::bad_alloc &)
   {
-    log_load("parse_failed");
+    // The staged set was never published. Normal lighting still runs.
   }
 }
 

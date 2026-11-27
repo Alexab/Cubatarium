@@ -3644,6 +3644,14 @@
       "receipt": "build/desktop-msvc/s4-q10-flags-write-acceptance.json",
       "scope": "Stream the sorted and deduplicated v2 flag coordinate pairs through a 32-byte row buffer into the temporary file. Preserve signature escaping, canonical bytes, the atomic replacement and exact revision and credit. The writer preserves the old commit on controlled temporary path refusal or invalid UTF-8 and successfully retries. The physical producer defers and replays its revision while the existing flag credit is occupied.",
       "remaining": "The ordinary peaks exclude the already allocated input snapshot and include asynchronous submission, temporary-file and result scopes. The producer takes one snapshot of eight bytes per marked column before allocator alignment. Join the live set backing, flag read parse and result metadata, paths and disk indexes with active terrain, receipt, registry, allocator and Q01.L2 terms. Keep full S0-S6 acceptance. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.FLAGS_READ",
+      "status": "SCOPED_Q10_FLAGS_READ_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_FLAGS_READ_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-flags-read-acceptance.json",
+      "scope": "Read v2 completion flags by staging one native hash set and publishing after validated EOF, signature and schema. Preserve signed coordinates and last duplicate members. Deduplicate coordinates without extra node allocations and validate ignored extensions through the bounded lexer. The native world resets the old bucket high water before loading a replacement and retries a refused physical file. The loaded metadata still requires live light coverage.",
+      "remaining": "The MSVC set measurement accounts for current nodes, sentinel and buckets. Join its cardinality and bucket growth and the optional reset allocation refusal with flag writer snapshots and result metadata, paths, indexes, read registry and Q01.L2. Full native, performance, memory and S0-S6 acceptance stays in scope. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
