@@ -6,6 +6,7 @@
 #include "ResourcePacks/ResourcePack.h"
 #include <array>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -157,6 +158,7 @@ private:
                                 const ResourcePackManifest &pack,
                                 std::unordered_map<std::string,bool> &memo) const;
   void AssignRuntimeIds();
+  std::optional<BlockId> FindBoundBlockName(const std::string &name) const;
   BlockId CreateSyntheticBlock(const std::string &name);
   static bool IsPackOwnedEntry(const MergedEntry &entry);
 
@@ -165,6 +167,7 @@ private:
   std::string WorldgenOwnerPackId;
   std::unordered_map<std::string, MergedEntry> BlocksByName;
   std::unordered_map<std::string, BlockId> NameToId;
+  size_t LongestBoundNameBytes{0};
   std::unordered_map<BlockId, std::string> IdToName;
   std::vector<MergedCubeDesc> CubeDescs;
   std::vector<std::pair<BlockDefinition, std::array<std::string, 6>>>

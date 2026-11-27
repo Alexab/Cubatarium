@@ -76,6 +76,7 @@ void UBlockMergeRegistry::Rebuild(
   PlaceholderTileSize = placeholderTileSize;
   BlocksByName.clear();
   NameToId.clear();
+  LongestBoundNameBytes = 0;
   IdToName.clear();
   CubeDescs.clear();
 
@@ -336,6 +337,7 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
 void UBlockMergeRegistry::AssignRuntimeIds()
 {
   NameToId.clear();
+  LongestBoundNameBytes = 0;
   IdToName.clear();
   CubeDescs.clear();
 
@@ -355,6 +357,7 @@ void UBlockMergeRegistry::AssignRuntimeIds()
     desc.AnimFrames = std::max(1, entry.Definition.Animation.FrameCount);
     PublishBlockBinding(name, std::move(desc), NameToId, IdToName, CubeDescs,
                         [&] { entry.Definition.Id = id; });
+    LongestBoundNameBytes = std::max(LongestBoundNameBytes, name.size());
     return true;
   };
 
@@ -440,14 +443,14 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   {
     return BLOCK_AIR;
   }
-  if (NameToId.count(name))
-  {
-    return NameToId.at(name);
-  }
-
-  const auto separator=name.find(kQualifiedBlockSeparator);
-  const UGenerationString local({std::string_view(name).substr(separator==std::string::npos ? 0 : separator+2)});
-  const auto tier=std::find(kTierAWorldgenNames.begin(),kTierAWorldgenNames.end(),std::string_view(local.Get()));
+  const auto separator = name.find(kQualifiedBlockSeparator);
+  const auto local = std::string_view(name).substr(separator == std::string::npos ? 0 : separator + 2);
+  // Generation callers retain name admission before a catalog mutation.
+  // Ordinary disk readers can examine the borrowed suffix directly.
+  std::optional<UGenerationString> generation_name;
+  if (ActiveBufferBudget.budget)
+    generation_name.emplace(std::initializer_list<std::string_view>{local});
+  const auto tier = std::find(kTierAWorldgenNames.begin(), kTierAWorldgenNames.end(), local);
   if (tier != kTierAWorldgenNames.end())
   {
     const auto index=static_cast<size_t>(tier-kTierAWorldgenNames.begin());
@@ -488,19 +491,22 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   static_assert(std::is_nothrow_move_assignable_v<MergedEntry>);
   PublishBlockBinding(name, std::move(desc), NameToId, IdToName, CubeDescs,
                       [&] { BlocksByName.insert_or_assign(name, std::move(entry)); });
+  LongestBoundNameBytes = std::max(LongestBoundNameBytes, name.size());
   return nextId;
 }
 
-BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
+std::optional<BlockId> UBlockMergeRegistry::FindBoundBlockName(const std::string &name) const
 {
-  std::shared_lock lock(CatalogMutex);
-  if (name.empty())
+  constexpr std::string_view separator(kQualifiedBlockSeparator);
+  const auto delimiter = name.find(separator);
+  const auto owner_bytes = WorldgenOwnerPackId.size();
+  const bool generation = bool(ActiveBufferBudget.budget);
+  const bool qualification_can_match = owner_bytes <= LongestBoundNameBytes &&
+      separator.size() <= LongestBoundNameBytes - owner_bytes &&
+      name.size() <= LongestBoundNameBytes - owner_bytes - separator.size();
+  if (delimiter == std::string::npos && owner_bytes && (generation || qualification_can_match))
   {
-    return BLOCK_AIR;
-  }
-  if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
-  {
-    const UGenerationString qualified({WorldgenOwnerPackId,kQualifiedBlockSeparator,name});
+    const UGenerationString qualified({WorldgenOwnerPackId, separator, name});
     const auto qualifiedIt = NameToId.find(qualified.Get());
     if (qualifiedIt != NameToId.end())
     {
@@ -512,16 +518,26 @@ BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
   {
     return it->second;
   }
-  if (IsQualifiedBlockName(name))
+  if (delimiter != std::string::npos)
   {
-    const UGenerationString local({std::string_view(name).substr(name.find(kQualifiedBlockSeparator)+2)});
-    const auto localIt = NameToId.find(local.Get());
-    if (localIt != NameToId.end())
+    const auto suffix = std::string_view(name).substr(delimiter + separator.size());
+    if (generation || suffix.size() <= LongestBoundNameBytes)
     {
-      return localIt->second;
+      const UGenerationString local({suffix});
+      const auto localIt = NameToId.find(local.Get());
+      if (localIt != NameToId.end())
+        return localIt->second;
     }
   }
-  return BLOCK_AIR;
+  return std::nullopt;
+}
+
+BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
+{
+  if (name.empty())
+    return BLOCK_AIR;
+  std::shared_lock lock(CatalogMutex);
+  return FindBoundBlockName(name).value_or(BLOCK_AIR);
 }
 
 BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
@@ -531,29 +547,8 @@ BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
   {
     return BLOCK_AIR;
   }
-  if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
-  {
-    const UGenerationString qualified({WorldgenOwnerPackId,kQualifiedBlockSeparator,name});
-    const auto qualifiedIt = NameToId.find(qualified.Get());
-    if (qualifiedIt != NameToId.end())
-    {
-      return qualifiedIt->second;
-    }
-  }
-  const auto it = NameToId.find(name);
-  if (it != NameToId.end())
-  {
-    return it->second;
-  }
-  if (IsQualifiedBlockName(name))
-  {
-    const UGenerationString local({std::string_view(name).substr(name.find(kQualifiedBlockSeparator)+2)});
-    const auto localIt = NameToId.find(local.Get());
-    if (localIt != NameToId.end())
-    {
-      return localIt->second;
-    }
-  }
+  if (const auto bound = FindBoundBlockName(name))
+    return *bound;
   return CreateSyntheticBlock(name);
 }
 

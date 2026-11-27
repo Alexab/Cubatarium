@@ -435,6 +435,7 @@ int main(int argc, char **argv)
     const auto save_snapshots = cutum::io_codec_fixture::CheckTerrainSaveSnapshots();
     const auto assignment = cutum::io_codec_fixture::CheckRuntimeIdAssignment();
     const auto synthetic = cutum::io_codec_fixture::CheckSyntheticRegistry();
+    const auto read_registry = cutum::io_codec_fixture::CheckReadRegistryStorage(folder + "-legacy-registry");
     const auto disk = cutum::io_codec_fixture::CheckDiskIndex(folder + "-index");
     const auto disk_commit = cutum::io_codec_fixture::CheckDiskIndexCommitRefusal(folder + "-index-commit");
     const auto malformed = cutum::io_codec_fixture::CheckMalformedJson();
@@ -464,6 +465,7 @@ int main(int argc, char **argv)
     result["terrain_save_snapshots"] = save_snapshots;
     result["runtime_id_assignment"] = assignment;
     result["synthetic_registry"] = synthetic;
+    result["ordinary_read_registry"] = read_registry;
     result["ordinary_disk_index"] = disk;
     result["ordinary_disk_index_commit"] = disk_commit;
     result["ordinary_failed_parse"] = malformed;

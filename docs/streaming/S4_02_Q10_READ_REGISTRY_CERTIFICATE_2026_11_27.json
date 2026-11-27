@@ -1,0 +1,246 @@
+{
+  "schema": "s4-q10-read-registry.v1",
+  "status": "SCOPED_Q10_READ_REGISTRY_PASS_Q10_OPEN",
+  "baseline_commit": "ea4e56f4fe54ad0817d916063246d6c073948d00",
+  "scope": "Check lookup lengths against published names before making impossible qualified keys on ordinary reads. Preserve generation name-credit controls and successful qualification, exact and local precedence. Borrow a suffix for the disk synthetic Tier A check. Store each placeholder key once in its stable LRU node while indexing it by view. Preserve replacement, collision sharing, rollback and physical legacy fallback.",
+  "remaining": "Join registry entry high water, remaining possible qualified scratch and placeholder backing with I/O payloads, metadata, paths, disk indexes and Q01.L2. Whole-catalog replacement and early legacy mutations before full terrain certification stay in the plan. Full S0-S6 acceptance remains open. 23 of 42 packages complete.",
+  "baseline_exe_sha256": "93dcfb693e34df4709fd1909e02a37d42b0e957458fce193d19f4c7d3d1e4e26",
+  "ordinary_before": {
+    "cache_pixel_requests": 7168,
+    "cache_rows": 7,
+    "cache_structure_upper": 1184280,
+    "exact": {
+      "attempts": 0,
+      "peak": 0
+    },
+    "legacy_name_bytes": 65536,
+    "local_fallback": {
+      "attempts": 1,
+      "peak": 4151
+    },
+    "long_absent": {
+      "attempts": 1,
+      "peak": 65655
+    },
+    "publish_attempts": 148,
+    "publish_peak": 1583240,
+    "publish_retained": 1517465,
+    "qualified_preferred": {
+      "attempts": 1,
+      "peak": 4215
+    },
+    "registry_upper": 331324,
+    "retired": true
+  },
+  "ordinary_after": {
+    "cache_pixel_requests": 7168,
+    "cache_rows": 7,
+    "cache_structure_upper": 396415,
+    "exact": {
+      "attempts": 0,
+      "peak": 0
+    },
+    "legacy_name_bytes": 65536,
+    "local_fallback": {
+      "attempts": 1,
+      "peak": 4151
+    },
+    "long_absent": {
+      "attempts": 0,
+      "peak": 0
+    },
+    "publish_attempts": 122,
+    "publish_peak": 730173,
+    "publish_retained": 729989,
+    "qualified_preferred": {
+      "attempts": 1,
+      "peak": 4215
+    },
+    "registry_upper": 331324,
+    "retired": true
+  },
+  "ordinary_focused_repeat": {
+    "cache_pixel_requests": 7168,
+    "cache_rows": 7,
+    "cache_structure_upper": 396367,
+    "exact": {
+      "attempts": 0,
+      "peak": 0
+    },
+    "legacy_name_bytes": 65536,
+    "local_fallback": {
+      "attempts": 1,
+      "peak": 4151
+    },
+    "long_absent": {
+      "attempts": 0,
+      "peak": 0
+    },
+    "publish_attempts": 122,
+    "publish_peak": 730173,
+    "publish_retained": 729989,
+    "qualified_preferred": {
+      "attempts": 1,
+      "peak": 4215
+    },
+    "registry_upper": 331324,
+    "retired": true
+  },
+  "physical_registry": {
+    "cache_pixel_requests": 6144,
+    "cache_rows": 6,
+    "cache_structure_upper": 199698,
+    "cold_reload": true,
+    "entries": 1,
+    "id": 4096,
+    "legacy_name_bytes": 32797,
+    "qualified_fallback": true,
+    "registry_upper": 167484,
+    "status": "PASS",
+    "worker_decode": true
+  },
+  "supplemental_release_modes": {
+    "placeholder-source": "PASS",
+    "placeholder-recovery": "PASS",
+    "catalog-owner-composition": "PASS"
+  },
+  "physical_index": {
+    "cancelled_retry": true,
+    "evicted_folder_rebuilt": true,
+    "folder_limit": 4,
+    "outstanding_after": 0,
+    "packed_slice_bytes": 20,
+    "packed_slices": 5,
+    "packed_tables": 9,
+    "status": "PASS",
+    "visited_folders": 5
+  },
+  "physical_flag_read": {
+    "grown_buckets": 2048,
+    "grown_requested_heap": 57431,
+    "heap_supported": true,
+    "invalid_tail_refused": true,
+    "published": 1025,
+    "reset_buckets": 8,
+    "retry": true,
+    "status": "PASS"
+  },
+  "physical_flag_producer": {
+    "bounded_while_active": true,
+    "cold_edit": true,
+    "deferred_flag_revision": true,
+    "final_flags": 0,
+    "final_writes": 0,
+    "rejected_with_free_slots": 24,
+    "required_writes": 25,
+    "status": "PASS",
+    "write_limit": 256
+  },
+  "physical_receipt_read": {
+    "receipt_read_scratch": 0,
+    "receipt_read_output": 8664,
+    "receipt_read_stack_buffer": 12368,
+    "receipt_checksum_stack": 12656,
+    "receipt_restore_payload": 8847,
+    "receipt_restore_handoff": true
+  },
+  "physical_receipt_write": {
+    "receipt_encode_buffer": 288,
+    "receipt_write_dom": 0,
+    "receipt_write_output": 16461
+  },
+  "profiles": {
+    "flat": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 902,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED",
+      "streamed_disk_fixture": "PASS",
+      "legacy_registry_ownership": "PASS"
+    },
+    "full": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 548,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "0e1978ff901ee790294f15229d60aec7bd4617d623f2d7b850755132bbf17b40",
+  "exe_sha256": "5cd738d4a5ee40626a18e19a9f5e217a43502869e6fae252171debebdfa66a5c",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "chunk_lighting_propagation_test",
+    "light_cache_certificate_test",
+    "relight_result_install_test",
+    "worldgen_scatter_block_resolve_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "completed_job_queue_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-read-registry-provenance.json": "bfc4ad61d56d3613933b99f47199cb21a7ea8331994ae808fe294aadd30fcdc0",
+    "build/desktop-msvc/s4-q10-read-registry-build.log": "cc6de212bbbbd2b7526e18870130c354ece2630cd71c19e933bce163fe6c927a",
+    "build/desktop-msvc/s4-q10-read-registry-regressions.json": "bf8fef836b352d5f370901dc65fbfb6116ccc7e96d7c357a218fe7b4019f320c",
+    "build/desktop-msvc/s4-q10-read-registry-regression-build.log": "55a3a4086309c0ced95c5660e4decc393cd9d157512f4af5766471051f9c21d2",
+    "build/desktop-msvc/s4-q10-read-registry-io-storage.json": "cad11b61cb26d2550406f4998525aaeaf8af774f4d243cc8f2e3a491530fd1a4",
+    "build/desktop-msvc/s4-q10-read-registry-before.exe": "93dcfb693e34df4709fd1909e02a37d42b0e957458fce193d19f4c7d3d1e4e26",
+    "build/desktop-msvc/s4-q10-read-registry-before-exe.sha256": "4ecbe396aeaa14c0dca989057a40df7e396c81c4400e8619e1bdf755d62673fb",
+    "build/desktop-msvc/s4-q10-read-registry-before.json": "c7d4b0e10ed9f0654aa5a66828f8f5f92b4516624cd4b524fdecc31f7c846106",
+    "build/desktop-msvc/s4-q10-read-registry-before.log": "0edfbe8afdfef62ca3292fb66af9ddc4363f4582c5e2ee3b54e2b6b70baa200c",
+    "build/desktop-msvc/s4-q10-read-registry-before-build.log": "3e16dea8c58142045c595921bf3ec3e79603709f4ac9dbb2388b4bb1a8c9cbb3",
+    "docs/streaming/S4_02_Q10_IO_METADATA_CERTIFICATE_2026_11_27.json": "0b838919863a827e5d539a0a35743dd950cc6172a4d17f2b02c3f3d4a4e3b495",
+    "build/desktop-msvc/s4-q10-read-registry-async_io_storage_test.log": "32c49dd9213b704d606dee0377b044835635c99c6ab54e6c0d3176d30ba0bf12",
+    "build/desktop-msvc/s4-q10-read-registry-application_operation_storage_test.log": "9ddf0c0b982bd74d360b9d4cb98d14b5eb6b401f42ead0c7bda740d18ced5cc5",
+    "build/desktop-msvc/s4-q10-read-registry-catalog_worker_retirement_test.log": "6ac0ce24015d40c108d8cd3fca7a9f2060aeee02e34c06afc6fad7594c1f0dc7",
+    "build/desktop-msvc/s4-q10-read-registry-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-read-registry-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-read-registry-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-read-registry-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-read-registry-chunk_lighting_propagation_test.log": "ed3dfbe34f9da1c33e19c20dca699c5c082d505d581170dc797fd0929f4c88a7",
+    "build/desktop-msvc/s4-q10-read-registry-light_cache_certificate_test.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build/desktop-msvc/s4-q10-read-registry-relight_result_install_test.log": "4341d3bf06613af3c0006e388d6f88e28212c1cc81dd101552767278e820df9a",
+    "build/desktop-msvc/s4-q10-read-registry-worldgen_scatter_block_resolve_test.log": "2206c4d63d5eacefdd94166e7c60c4f18ce6acf0d94c9e367ce564217c3a4ef1",
+    "build/desktop-msvc/s4-q10-read-registry-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-read-registry-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-read-registry-completed_job_queue_test.log": "c7730b8fbbc3c67ea79c44795ad9bfad49bd0b3262b9a0e89f8f84299a760eb5",
+    "build/desktop-msvc/s4-q10-read-registry-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-read-registry-focused.json": "afa4d1a96c2ee883090fabf1ff7a37a0e48cea74af3df47c5943cc122c51f957",
+    "build/desktop-msvc/s4-q10-read-registry-focused.log": "bd22133253ffc3aa8000053d6e25b580f0c89df7107e9d1b290329eb1a94c055",
+    "build/desktop-msvc/s4-q10-read-registry-placeholder-source.json": "9933a99947dfecd443e7156b2b8f87037f7cfec42b071a02ad6241b2e0acccfc",
+    "build/desktop-msvc/s4-q10-read-registry-placeholder-source.log": "9be98c83e6412e04721d26893dc35eb898f90f45536ed842082c746e6394774f",
+    "build/desktop-msvc/s4-q10-read-registry-placeholder-recovery.json": "5018d06bd9cbeab23ea189d3af1fc0dd68e3e39930f125fe814cf42ea585d583",
+    "build/desktop-msvc/s4-q10-read-registry-placeholder-recovery.log": "c7f91ef2db97405bc6c021343b97266db326cba07f9ae21ca5fad839a5db0251",
+    "build/desktop-msvc/s4-q10-read-registry-catalog-owner-composition.json": "87cc6886903bff9978609e79afd08bf3c7cfd18cd56d431c3a9ce8f35b8e1605",
+    "build/desktop-msvc/s4-q10-read-registry-catalog-owner-composition.log": "4b4de7b2b0d831df329e371ddee6e739b022ba648f5eb12e4687ec3403b7944d",
+    "build/desktop-msvc/s4-q10-read-registry-flat/route.json": "8772dcbe2917766bc9c8ca4e00526c9a4845a63ca1a6e440e06b30fbf9d0b84e",
+    "build/desktop-msvc/s4-q10-read-registry-flat/smoke-verdict.json": "1f961e0988798f78ef7492d7053121204a67c99ea3f7202c17630b380c94c3cf",
+    "build/desktop-msvc/s4-q10-read-registry-flat/flight_sim_report.json": "4d3addd21ec915d63d9b66f7747d9dfda9cb9ddd2d2bdb140ab0afc7afa5efcf",
+    "build/desktop-msvc/s4-q10-read-registry-flat/desktop-normal-shutdown.json": "3248142182e4805f4a5e955d8bcfd4b685cfa0ea19e08fbbc4542645ad428670",
+    "build/desktop-msvc/s4-q10-read-registry-flat/legacy-gates.json": "d7a8cd7d3424d0ac32e43ecd9df537497fdaf1cfca6b3973d21e1f407b9f1584",
+    "build/desktop-msvc/s4-q10-read-registry-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-read-registry-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-read-registry-flat.log": "583c4e094be1d5ff273fd965b25e09b2fda08fcc12e3e47a3e3781ffa67c3f8f",
+    "build/desktop-msvc/s4-q10-read-registry-flat/runner.log": "b03b0cbab0644f994177c8c01b10202519ad9ca31feabc446b3f31dccbce8e3a",
+    "build/desktop-msvc/s4-q10-read-registry-flat/terrain-save-probe/report.json": "8618aaf7fc36f43633c748721990b6dd0077a063f875f5510237a81a3c442376",
+    "build/desktop-msvc/s4-q10-read-registry-full/route.json": "96d87bf3ab2c75f5e699d28aedc83a5998714a336d8cff6b97e3d58fe5bd3d24",
+    "build/desktop-msvc/s4-q10-read-registry-full/smoke-verdict.json": "e53edb0fd068a2ba476393712646660f4f2352f2d6d83382183d7ba7ad16a2e7",
+    "build/desktop-msvc/s4-q10-read-registry-full/flight_sim_report.json": "fe7105116bf681647267f8419fbd7f3f06934c099e9db5be18438c6340be803c",
+    "build/desktop-msvc/s4-q10-read-registry-full/desktop-normal-shutdown.json": "e2dfec3272d61510cbb01b8599f3b3e2a7117e73753609703295903515465717",
+    "build/desktop-msvc/s4-q10-read-registry-full/legacy-gates.json": "89b1a5631025e7751f5c33eadf8dd0dd8dceee39c229ff00a738f429330180f3",
+    "build/desktop-msvc/s4-q10-read-registry-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-read-registry-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-read-registry-full.log": "dacbfdea655d8ec4762d994732a3af7f235414901af67101770ff43e9ed64ed9",
+    "build/desktop-msvc/s4-q10-read-registry-full/runner.log": "76245dac27acb99d660378af6799c0a4ba54e16579b9213de1cd33118737849a"
+  }
+}

@@ -13,6 +13,7 @@
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
+#include "WorldGen/Core/MergeSourceEnvelope.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cstdio>
@@ -857,14 +858,17 @@ struct AsyncIoStorageProbe
     const auto cell = coord * CHUNK_SIZE;
     const auto path = storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Json);
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
-    const std::string name = "fixture_legacy_missing_block";
-    {
+    const std::string name = "fixture_legacy_missing_block_" + std::string(32768, 'n');
+    const auto install = [&](const std::string &stored_name) {
       std::ofstream file(path, std::ios::binary);
-      file << R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":")" << name << R"("}]})";
+      file << R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":")" << stored_name << R"("}]})";
       file.close();
       Require(file.good(), "write the physical legacy synthetic chunk");
-    }
+    };
+    install(name);
+    auto placeholder = std::make_shared<UPlaceholderTextureCache>(root / "placeholders", 16, glm::vec3(0.2f), 8);
     auto merge = std::make_shared<UBlockMergeRegistry>();
+    merge->Rebuild({}, placeholder, 16);
     UBlockRegistry registry(nullptr);
     registry.SetMergeRegistry(merge);
     UAsyncChunkIO io;
@@ -878,13 +882,24 @@ struct AsyncIoStorageProbe
                   ready.front().decodedBuffer->GetBlock(cell) == id,
               "the worker decodes the new synthetic ID");
     }
+    const auto cache = MeasurePlaceholderSourceInput(*placeholder);
+    const auto owner = InspectMergeTargetInput(*merge);
+    Require(cache.supported && !cache.overflow && owner.supported && !owner.overflow &&
+                cache.pixel_count == 6 && placeholder->GetEntryCount() == 6,
+            "capture the real matched process registry and six cached faces after delivery");
+    // Older data could qualify a name from a pack that is absent now.
+    install("unavailable_pack::" + name);
     UBlockWorld cold;
     const auto *reverse = merge->GetTypeNameById(id);
     Require(storage.LoadChunk(coord, cold, folder, registry) == 1 && cold.GetBlock(cell) == id &&
                 merge->LookupBlockName(name) == id && reverse && *reverse == name &&
                 merge->GetCubeDescriptors().size() == 1 && merge->GetCubeDescriptors().front().Name == name &&
-                !io.GetOutstandingLoadCount(), "cold reload reuses the same complete catalog entry");
-    return {{"status", "PASS"}, {"id", id}, {"entries", 1}, {"worker_decode", true}, {"cold_reload", true}};
+                !io.GetOutstandingLoadCount() && placeholder->GetEntryCount() == 6,
+            "cold qualified reload reuses the same complete catalog entry and cache");
+    return {{"status", "PASS"}, {"id", id}, {"entries", 1}, {"worker_decode", true}, {"cold_reload", true},
+            {"legacy_name_bytes", name.size()}, {"cache_rows", cache.pixel_count},
+            {"cache_pixel_requests", cache.pixel_heap_upper}, {"registry_upper", owner.heap_upper},
+            {"cache_structure_upper", cache.structural_heap_upper}, {"qualified_fallback", true}};
   }
 
   static nlohmann::json CheckSaveSnapshotQueue(const std::filesystem::path &root)

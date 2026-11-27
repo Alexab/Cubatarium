@@ -3668,11 +3668,19 @@
       "receipt": "build/desktop-msvc/s4-q10-io-metadata-acceptance.json",
       "scope": "Move the authored world folder from job to result, keep stable operation tags, and derive the terrain path only in the physical write or active diagnostics. A failed range cleanup reports the first failure and processes all remaining slices. Prepare lossless completion ring backing for the existing credit limits, including growth from a wrapped head. A held result retains its credit until delivery and release.",
       "remaining": "The completion rings are allocated up front per active I/O instance. Compose their simultaneous returned-vector backing, retained strings, paths, read registry, disk-index high water, flag and terrain payloads and Q01.L2. Full native, performance, memory and S0-S6 acceptance remain in scope. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.READ_REGISTRY",
+      "status": "SCOPED_Q10_READ_REGISTRY_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_READ_REGISTRY_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-read-registry-acceptance.json",
+      "scope": "Check lookup lengths against published names before making impossible qualified keys on ordinary reads. Preserve generation name-credit controls and successful qualification, exact and local precedence. Borrow a suffix for the disk synthetic Tier A check. Store each placeholder key once in its stable LRU node while indexing it by view. Preserve replacement, collision sharing, rollback and physical legacy fallback.",
+      "remaining": "Join registry entry high water, remaining possible qualified scratch and placeholder backing with I/O payloads, metadata, paths, disk indexes and Q01.L2. Whole-catalog replacement and early legacy mutations before full terrain certification stay in the plan. Full S0-S6 acceptance remains open. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверить память реестра при чтении сохранений и свести её с данными и метаданными I/O, путями, дисковым индексом и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Свести проверенные данные и метаданные I/O, пути, реестр чтения и историю дискового индекса с Q01.L2. Учесть рост реестра и оставшиеся временные выделения. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

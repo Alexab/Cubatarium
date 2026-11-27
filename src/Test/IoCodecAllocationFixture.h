@@ -12,6 +12,7 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
+#include "WorldGen/Core/MergeSourceEnvelope.h"
 #include <fstream>
 #include <limits>
 #include <nlohmann/json.hpp>
@@ -68,6 +69,75 @@ inline nlohmann::json CheckRuntimeIdAssignment()
     Require(!observation::State.live && !observation::State.blocks, "runtime refusal backing retires with its registry");
   }
   return {{"refusals", attempts}, {"stable_retry_id", expected_id}};
+}
+
+inline nlohmann::json CheckReadRegistryStorage(const std::filesystem::path &root)
+{
+  const std::string owner(64, 'p');
+  const std::string local(4096, 'r');
+  const std::string qualified = owner + "::" + local;
+  const std::string foreign = "foreign::" + local;
+  const std::string missing(UJsonChunkSerializer::kMaxLegacyNameBytes, 'm');
+  UBlockMergeRegistry lookup;
+  const auto qualified_id = lookup.ResolveName(qualified);
+  const auto local_id = lookup.ResolveName(local);
+  Require(qualified_id != BLOCK_AIR && local_id != BLOCK_AIR && qualified_id != local_id,
+          "seed exact qualified and local catalog bindings");
+  lookup.SetWorldgenOwnerPackId(owner);
+  const auto measure = [&](const std::string &name, BlockId expected, bool resolve) {
+    size_t peak = 0, attempts = 0;
+    {
+      observation::Scope requests;
+      const auto resolved = resolve ? lookup.ResolveName(name) : lookup.LookupBlockName(name);
+      Require(resolved == expected && !observation::State.live && !observation::State.blocks,
+              "verify precedence and retire lookup scratch");
+      peak = observation::State.peak;
+      attempts = observation::State.attempts;
+    }
+    return nlohmann::json{{"peak", peak}, {"attempts", attempts}};
+  };
+  const auto preferred = measure(local, qualified_id, true);
+  const auto fallback = measure(foreign, local_id, true);
+  const auto exact = measure(qualified, qualified_id, false);
+  const auto absent = measure(missing, BLOCK_AIR, false);
+  Require(lookup.GetNameToId().size() == 2 && absent["attempts"] == 0,
+          "an impossible qualification preserves the catalog without allocating");
+
+  size_t peak = 0, retained = 0, attempts = 0, registry_upper = 0, cache_structure = 0, cache_pixels = 0, cache_rows = 0;
+  {
+    auto cache = std::make_shared<UPlaceholderTextureCache>(root, 16, glm::vec3(0.2f), 8);
+    cache->GetOrCreateStem("fixture_warm", 0, 16);
+    UBlockMergeRegistry registry;
+    registry.Rebuild({}, cache, 16);
+    registry.SetWorldgenOwnerPackId(owner);
+    {
+      observation::Scope requests;
+      Require(registry.ResolveName(missing) == kRuntimeBlockIdMin, "a physical legacy name publishes once");
+      peak = observation::State.peak;
+      retained = observation::State.live;
+      attempts = observation::State.attempts;
+    }
+    const auto registry_model = InspectMergeTargetInput(registry);
+    const auto cache_model = MeasurePlaceholderSourceInput(*cache);
+    registry_upper = registry_model.heap_upper;
+    cache_structure = cache_model.structural_heap_upper;
+    cache_pixels = cache_model.pixel_heap_upper;
+    cache_rows = cache->GetEntryCount();
+    Require(registry_model.supported && !registry_model.overflow && cache_model.supported && !cache_model.overflow &&
+                registry.GetNameToId().size() == 1 && cache_rows == 7 && cache_model.pixel_count == cache_rows &&
+                retained <= registry_upper + cache_structure + cache_pixels,
+            "account the published registry and actual placeholder cache backing independently");
+    const auto expected = registry.GetCubeDescriptors().front().Stems[0];
+    Require(cache->GetOrCreateStem(missing, 0, 16) == expected,
+            "moving the long key into its LRU owner preserves the matching stem");
+  }
+  Require(!observation::State.live && !observation::State.blocks,
+          "read registry and placeholder backing retire together");
+  return {{"qualified_preferred", preferred}, {"local_fallback", fallback}, {"exact", exact},
+          {"long_absent", absent}, {"legacy_name_bytes", missing.size()}, {"publish_peak", peak},
+          {"publish_retained", retained}, {"publish_attempts", attempts}, {"registry_upper", registry_upper},
+          {"cache_structure_upper", cache_structure}, {"cache_pixel_requests", cache_pixels},
+          {"cache_rows", cache_rows}, {"retired", true}};
 }
 
 inline nlohmann::json CheckSyntheticRegistry()

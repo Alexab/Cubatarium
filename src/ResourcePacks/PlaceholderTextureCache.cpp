@@ -7,6 +7,7 @@
 #include <fstream>
 #include <functional>
 #include <iomanip>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 #include <type_traits>
@@ -95,36 +96,22 @@ UPlaceholderTextureCache::UPlaceholderTextureCache(
   std::filesystem::create_directories(CacheDir, ec);
 }
 
-void UPlaceholderTextureCache::TouchLru(const std::string &key)
-{
-  const auto it = LruIt.find(key);
-  if (it != LruIt.end())
-  {
-    LruOrder.splice(LruOrder.begin(),LruOrder,it->second);
-  }
-}
-
 void UPlaceholderTextureCache::EvictIfNeeded()
 {
-  while (KeyToStem.size() > MaxEntries && !LruOrder.empty())
+  while (LruOrder.size() > MaxEntries)
   {
-    const std::string &victim = LruOrder.back();
-    const auto stemIt = KeyToStem.find(victim);
-    if (stemIt != KeyToStem.end())
+    const auto &victim = LruOrder.back();
+    // A hash-colliding stem can be referenced by another key. Keep that
+    // shared payload/file until the last key is retired.
+    const bool shared = std::any_of(LruOrder.begin(), std::prev(LruOrder.end()),
+        [&](const auto &entry) { return entry.second == victim.second; });
+    if (!shared)
     {
-      // A hash-colliding stem can be referenced by another key. Keep that
-      // shared payload/file until the last key is retired.
-      bool shared=false;
-      for(const auto &entry:KeyToStem)
-        if(entry.first!=victim && entry.second==stemIt->second){shared=true;break;}
-      if(!shared){
-        std::error_code ec;
-        std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second),ec);
-        StemPixels.erase(stemIt->second);
-      }
-      KeyToStem.erase(stemIt);
+      std::error_code ec;
+      std::filesystem::remove(PlaceholderFilePath(CacheDir, victim.second), ec);
+      StemPixels.erase(victim.second);
     }
-    LruIt.erase(victim);
+    LruIt.erase(victim.first);
     LruOrder.pop_back();
   }
 }
@@ -132,8 +119,15 @@ void UPlaceholderTextureCache::EvictIfNeeded()
 std::string UPlaceholderTextureCache::MakeKey(const std::string &blockName,
                                               int faceIndex, int tileSize) const
 {
-  return blockName + "|" + std::to_string(faceIndex) + "|" +
-         std::to_string(tileSize);
+  const auto face = std::to_string(faceIndex);
+  const auto tile = std::to_string(tileSize);
+  std::string key;
+  const size_t suffix = face.size() + tile.size() + 2;
+  if (blockName.size() > key.max_size() - suffix)
+    throw std::length_error("placeholder key length overflow");
+  key.reserve(blockName.size() + suffix);
+  key.append(blockName).append("|").append(face).append("|").append(tile);
+  return key;
 }
 
 std::string UPlaceholderTextureCache::MakeStem(const std::string &key) const
@@ -253,12 +247,12 @@ std::string
 UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockName,
                                           int faceIndex, int tileSize)
 {
-  const std::string key = MakeKey(blockName, faceIndex, tileSize);
-  const auto it = KeyToStem.find(key);
-  if (it != KeyToStem.end())
+  auto key = MakeKey(blockName, faceIndex, tileSize);
+  const auto it = LruIt.find(key);
+  if (it != LruIt.end())
   {
-    std::string result=it->second;
-    TouchLru(key);
+    std::string result = it->second->second;
+    LruOrder.splice(LruOrder.begin(), LruOrder, it->second);
     return result;
   }
   const std::string stem = MakeStem(key);
@@ -273,20 +267,18 @@ UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockName,
   std::string result=stem;
   decltype(StemPixels)::iterator pixel;
   decltype(LruIt)::iterator lru;
-  decltype(KeyToStem)::iterator published;
-  bool newPixel=false,newLru=false,newKey=false,listNode=false;
+  bool newPixel=false,newLru=false,listNode=false;
   try {
     const auto inserted=StemPixels.try_emplace(stem);pixel=inserted.first;newPixel=inserted.second;
-    LruOrder.push_front(key);listNode=true;
-    const auto indexed=LruIt.emplace(key,LruOrder.begin());lru=indexed.first;newLru=indexed.second;
-    const auto admitted=KeyToStem.emplace(key,stem);published=admitted.first;newKey=admitted.second;
+    LruOrder.emplace_front(std::move(key),stem);listNode=true;
+    const auto indexed=LruIt.emplace(LruOrder.front().first,LruOrder.begin());
+    lru=indexed.first;newLru=indexed.second;
     // With a consistent cache one new key can evict at most one old key.
     // All allocation-capable file/path work precedes that victim's removal.
     EvictIfNeeded();
     static_assert(std::is_nothrow_move_assignable_v<TexturePixelData>);
     pixel->second=std::move(pixels);
   } catch (...) {
-    if(newKey)KeyToStem.erase(published);
     if(newLru)LruIt.erase(lru);
     if(listNode)LruOrder.pop_front();
     if(newPixel)StemPixels.erase(pixel);
